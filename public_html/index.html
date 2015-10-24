@@ -2,10 +2,11 @@
 <html class="no-js" lang="">
     <head>
         <meta charset="utf-8">
-        <title></title>
+        <title>poolPi</title>
         <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0">
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/main.css">
 		
@@ -24,6 +25,9 @@
 				redeemer: function(control, id, value, onSuccess){
 					//console.log(control);
 					//console.log(value);
+					var audio = new Audio('./res/confirm.mp3');
+					audio.play();
+					
 					$.ajax({
 						url: "redeemer.php?control="+control+"&id="+id+"&value="+value,
 						success: function (data, textStatus, jqXHR) {
@@ -34,30 +38,35 @@
 
 				},
 				
-				update: function(v){
-					$.ajax({
-						dataType: "json",
-						url: "proxy.php?control="+control["IP"+$(v).data("server")],
-						success: function(data) {
-							$(v).prop("src", "./img/"+data[$(v).data("master")]);
-							
-							var status = "off";
-							if(data[$(v).data("master")].indexOf("_run") > 0)
-								status = "on";
-							
-							if(data[$(v).data("master")].indexOf("_on") > 0)
-								status = "on";
-							
-							if(data[$(v).data("master")].indexOf("-1") > 0)
-								status = "on";
-							
-							$(v).data("status", status);
-						}
-					});
+				update: function(v, delay){
+					if(typeof delay == "undefined")
+						delay = 500;
+					
+					window.setTimeout(function(){
+						$.ajax({
+							dataType: "json",
+							url: "proxy.php?control="+control["IP"+$(v).data("server")],
+							success: function(data) {
+								$(v).prop("src", "./img/"+data[$(v).data("master")]);
+
+								var status = "off";
+								if(data[$(v).data("master")].indexOf("_run") > 0)
+									status = "on";
+
+								if(data[$(v).data("master")].indexOf("_on") > 0)
+									status = "on";
+
+								if(data[$(v).data("master")].indexOf("-1") > 0)
+									status = "on";
+
+								$(v).data("status", status);
+							}
+						});
+					}, delay);
 				},
 				
 				tap: function(e){
-					control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value") ? e.data("value") : 'i',  function(){
+					control.redeemer(control["IP"+e.data("server")], e.data("master"), typeof e.data("value") !== "undefined" ? e.data("value") : 'i',  function(){
 						control.update(e);
 
 						if(e.data("update")){
@@ -65,13 +74,9 @@
 							u.forEach(function(k, v){
 								$("[data-group="+k+"]").each(function(sk, sv){
 									if($(sv).data("group-delay")){
-										if($(sv).data("group-delayif") && $(sv).data("group-delayif") == $(sv).data("status")){
-
-											window.setTimeout(function(){
-												control.update(sv);
-											}, $(sv).data("group-delay") * 1000);
-
-										} else
+										if($(sv).data("group-delayif") && $(sv).data("group-delayif") == $(sv).data("status"))
+											control.update(sv, $(sv).data("group-delay") * 1000);
+										else
 											control.update(sv);
 
 									} else
@@ -86,6 +91,10 @@
 			
 			
 			$(function(){
+				document.ontouchmove = function(event){
+					event.preventDefault();
+				}
+
 				/*$(".touch").hammer().bind("tap", function(ev) {
 					console.log(ev);
 				});*/
@@ -137,6 +146,10 @@
 		</script>
 		
 		<style type="text/css">
+			body {
+				margin-top:2em;
+			}
+			
 			.touch {
 				cursor: pointer;
 				height:120px;
@@ -168,13 +181,13 @@
 			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="2" src="./img/abdauf-0.gif" />
 		</div>
 		
-		<div style="margin-top:1em;">
+		<div style="margin-top:4em;">
 			<img class="touch load" data-server="Attraktion" data-master="0017" src="./img/dsnone.gif" />
 			<img class="touch load" data-server="Attraktion" data-master="0018" src="./img/dsnone.gif" />
 			<img class="touch load" data-server="Attraktion" data-master="0021" src="./img/dsnone.gif" />
 		</div>
 		
-		<div style="margin-top:1em;">
+		<div style="margin-top:4em;">
 			<img class="touch load" data-server="Color" data-group="light" data-update="colors,light" data-master="0008" src="./img/dsnone.gif" />
 			<img class="touch load" data-server="Color" data-group="light" data-group-delay="7" data-group-delayif="on" data-master="0009" src="./img/dsnone.gif" />
 		</div>
@@ -186,14 +199,14 @@
 			</div>
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0110" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Rot</div>
+				<div class="label">Grün</div>
 			</div>
 		</div>
 		
 		<div style="margin-top:1em;">
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0111" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Grün</div>
+				<div class="label">Blau</div>
 			</div>
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0113" data-update="colors,light" src="./img/dsnone.gif" />
