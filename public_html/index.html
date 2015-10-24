@@ -22,15 +22,15 @@
 				IPAttraktion: 188,
 				
 				redeemer: function(control, id, value, onSuccess){
-					console.log(control);
-					console.log(value);
-					/*$.ajax({
+					//console.log(control);
+					//console.log(value);
+					$.ajax({
 						url: "redeemer.php?control="+control+"&id="+id+"&value="+value,
 						success: function (data, textStatus, jqXHR) {
 							//console.log(data);
 							onSuccess();
 						}
-					});*/
+					});
 
 				},
 				
@@ -40,6 +40,45 @@
 						url: "proxy.php?control="+control["IP"+$(v).data("server")],
 						success: function(data) {
 							$(v).prop("src", "./img/"+data[$(v).data("master")]);
+							
+							var status = "off";
+							if(data[$(v).data("master")].indexOf("_run") > 0)
+								status = "on";
+							
+							if(data[$(v).data("master")].indexOf("_on") > 0)
+								status = "on";
+							
+							if(data[$(v).data("master")].indexOf("-1") > 0)
+								status = "on";
+							
+							$(v).data("status", status);
+						}
+					});
+				},
+				
+				tap: function(e){
+					control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value") ? e.data("value") : 'i',  function(){
+						control.update(e);
+
+						if(e.data("update")){
+							var u = e.data("update").split(",");
+							u.forEach(function(k, v){
+								$("[data-group="+k+"]").each(function(sk, sv){
+									if($(sv).data("group-delay")){
+										if($(sv).data("group-delayif") && $(sv).data("group-delayif") == $(sv).data("status")){
+
+											window.setTimeout(function(){
+												control.update(sv);
+											}, $(sv).data("group-delay") * 1000);
+
+										} else
+											control.update(sv);
+
+									} else
+										control.update(sv);
+								});
+
+							});
 						}
 					});
 				}
@@ -59,13 +98,20 @@
 					$(ev.target).css("opacity", "1");
 				});
 				
+				$(".label").bind("mousedown touchstart", function(ev) {
+					$(ev.target).parent().css("opacity", ".5");
+				});
+				
+				$(".label").bind("mouseup touchend", function(ev) {
+					$(ev.target).parent().css("opacity", "1");
+				});
+				
+				
 				$('.manual').each(function(k, v){
 					//control.update(v);
 					
 					$(v).hammer().bind("tap", function(ev) {
 						var e = $(ev.target);
-						console.log(e.data("value"));
-						console.log(e.data("server"));
 						control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value"),  function(){
 							//control.update(ev.target);
 						});
@@ -77,22 +123,13 @@
 					control.update(v);
 					
 					$(v).hammer().bind("tap", function(ev) {
-						var e = $(ev.target);
-						
-							
-						control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value") ? e.data("value") : 'i',  function(){
-							control.update(ev.target);
-							
-							if(e.data("update")){
-								var u = e.data("update").split(",");
-								u.forEach(function(k, v){
-									control.update($("[data-master="+k+"]").get(0));
-								});
-							}
-							
-							console.log(e.data("update"));
-						});
-						
+						control.tap($(ev.target));
+					});
+				});
+				
+				$('.load + .label').each(function(k, v){
+					$(v).hammer().bind("tap", function(ev) {
+						control.tap($(ev.target).prev());
 					});
 				});
 			});
@@ -107,9 +144,15 @@
 			}
 			
 			.label {
-				height:50px;
-				margin-top:-50px;
+				height:80px;
+				margin-top:-80px;
 				padding-left:10px;
+				padding-right:10px;
+				cursor: pointer;
+				font-size:2em;
+				text-align:center;
+				width:180px;
+				box-sizing: border-box;
 			}
 			
 			.inline {
@@ -132,25 +175,29 @@
 		</div>
 		
 		<div style="margin-top:1em;">
-			<img class="touch load" data-server="Color" data-master="0008" src="./img/dsnone.gif" />
-			<img class="touch load" data-server="Color" data-master="0009" src="./img/dsnone.gif" />
+			<img class="touch load" data-server="Color" data-group="light" data-update="colors,light" data-master="0008" src="./img/dsnone.gif" />
+			<img class="touch load" data-server="Color" data-group="light" data-group-delay="7" data-group-delayif="on" data-master="0009" src="./img/dsnone.gif" />
 		</div>
+		
 		<div style="margin-top:1em;">
 			<div class="inline">
-				<img class="touch load" data-server="Color" data-master="0101" data-update="0008,0009" src="./img/dsnone.gif" />
-				<div class="label">Programm 2</div>
+				<img class="touch load" data-group="colors" data-server="Color" data-master="0101" data-update="colors,light" src="./img/dsnone.gif" />
+				<div class="label">Bunt</div>
 			</div>
 			<div class="inline">
-				<img class="touch load" data-server="Color" data-master="0110" data-update="0008,0009" src="./img/dsnone.gif" />
-				<div class="label">Programm 11</div>
+				<img class="touch load" data-group="colors" data-server="Color" data-master="0110" data-update="colors,light" src="./img/dsnone.gif" />
+				<div class="label">Rot</div>
+			</div>
+		</div>
+		
+		<div style="margin-top:1em;">
+			<div class="inline">
+				<img class="touch load" data-group="colors" data-server="Color" data-master="0111" data-update="colors,light" src="./img/dsnone.gif" />
+				<div class="label">Grün</div>
 			</div>
 			<div class="inline">
-				<img class="touch load" data-server="Color" data-master="0111" data-update="0008,0009" src="./img/dsnone.gif" />
-				<div class="label">Programm 12</div>
-			</div>
-			<div class="inline">
-				<img class="touch load" data-server="Color" data-master="0113" data-update="0008,0009" src="./img/dsnone.gif" />
-				<div class="label">Programm 14</div>
+				<img class="touch load" data-group="colors" data-server="Color" data-master="0113" data-update="colors,light" src="./img/dsnone.gif" />
+				<div class="label">Pastell</div>
 			</div>
 		</div>
 
