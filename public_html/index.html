@@ -1,0 +1,160 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="stylesheet" href="css/normalize.css">
+        <link rel="stylesheet" href="css/main.css">
+		
+		<script src="js/vendor/jquery-1.11.3.min.js"></script>
+		<script src="js/vendor/hammer.min.js"></script>
+		<script src="js/vendor/jquery.hammer.js"></script>
+		<script src="js/plugins.js"></script>
+		<script src="js/main.js"></script>
+		
+		<script type="text/javascript">
+			var control = {
+				IPEuromatik: 195,
+				IPColor: 174,
+				IPAttraktion: 188,
+				
+				redeemer: function(control, id, value, onSuccess){
+					console.log(control);
+					console.log(value);
+					/*$.ajax({
+						url: "redeemer.php?control="+control+"&id="+id+"&value="+value,
+						success: function (data, textStatus, jqXHR) {
+							//console.log(data);
+							onSuccess();
+						}
+					});*/
+
+				},
+				
+				update: function(v){
+					$.ajax({
+						dataType: "json",
+						url: "proxy.php?control="+control["IP"+$(v).data("server")],
+						success: function(data) {
+							$(v).prop("src", "./img/"+data[$(v).data("master")]);
+						}
+					});
+				}
+			};
+			
+			
+			$(function(){
+				/*$(".touch").hammer().bind("tap", function(ev) {
+					console.log(ev);
+				});*/
+				
+				$(".touch").bind("mousedown touchstart", function(ev) {
+					$(ev.target).css("opacity", ".5");
+				});
+				
+				$(".touch").bind("mouseup touchend", function(ev) {
+					$(ev.target).css("opacity", "1");
+				});
+				
+				$('.manual').each(function(k, v){
+					//control.update(v);
+					
+					$(v).hammer().bind("tap", function(ev) {
+						var e = $(ev.target);
+						console.log(e.data("value"));
+						console.log(e.data("server"));
+						control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value"),  function(){
+							//control.update(ev.target);
+						});
+						
+					});
+				});
+				
+				$('.load').each(function(k, v){
+					control.update(v);
+					
+					$(v).hammer().bind("tap", function(ev) {
+						var e = $(ev.target);
+						
+							
+						control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value") ? e.data("value") : 'i',  function(){
+							control.update(ev.target);
+							
+							if(e.data("update")){
+								var u = e.data("update").split(",");
+								u.forEach(function(k, v){
+									control.update($("[data-master="+k+"]").get(0));
+								});
+							}
+							
+							console.log(e.data("update"));
+						});
+						
+					});
+				});
+			});
+
+		</script>
+		
+		<style type="text/css">
+			.touch {
+				cursor: pointer;
+				height:120px;
+				width:180px;
+			}
+			
+			.label {
+				height:50px;
+				margin-top:-50px;
+				padding-left:10px;
+			}
+			
+			.inline {
+				display:inline-block;
+				vertical-align: top;
+			}
+		</style>
+    </head>
+    <body>
+		<div>
+			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="1" src="./img/abdzu-0.gif" />
+			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="0" src="./img/abdstop.gif" />
+			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="2" src="./img/abdauf-0.gif" />
+		</div>
+		
+		<div style="margin-top:1em;">
+			<img class="touch load" data-server="Attraktion" data-master="0017" src="./img/dsnone.gif" />
+			<img class="touch load" data-server="Attraktion" data-master="0018" src="./img/dsnone.gif" />
+			<img class="touch load" data-server="Attraktion" data-master="0021" src="./img/dsnone.gif" />
+		</div>
+		
+		<div style="margin-top:1em;">
+			<img class="touch load" data-server="Color" data-master="0008" src="./img/dsnone.gif" />
+			<img class="touch load" data-server="Color" data-master="0009" src="./img/dsnone.gif" />
+		</div>
+		<div style="margin-top:1em;">
+			<div class="inline">
+				<img class="touch load" data-server="Color" data-master="0101" data-update="0008,0009" src="./img/dsnone.gif" />
+				<div class="label">Programm 2</div>
+			</div>
+			<div class="inline">
+				<img class="touch load" data-server="Color" data-master="0110" data-update="0008,0009" src="./img/dsnone.gif" />
+				<div class="label">Programm 11</div>
+			</div>
+			<div class="inline">
+				<img class="touch load" data-server="Color" data-master="0111" data-update="0008,0009" src="./img/dsnone.gif" />
+				<div class="label">Programm 12</div>
+			</div>
+			<div class="inline">
+				<img class="touch load" data-server="Color" data-master="0113" data-update="0008,0009" src="./img/dsnone.gif" />
+				<div class="label">Programm 14</div>
+			</div>
+		</div>
+
+		
+
+    </body>
+</html>
