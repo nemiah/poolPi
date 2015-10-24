@@ -86,6 +86,17 @@
 							});
 						}
 					});
+				},
+				
+				value: function(e){
+					$.ajax({
+						dataType: "json",
+						url: "proxy.php?control="+control["IP"+$(e).data("server")],
+						success: function (data, textStatus, jqXHR) {
+							$(e).html(data[$(e).data("master")]);
+							//onSuccess();
+						}
+					});
 				}
 			};
 			
@@ -141,6 +152,13 @@
 						control.tap($(ev.target).prev());
 					});
 				});
+				
+				$('.value').each(function(k, v){
+					control.value(v);
+					window.setInterval(function(){
+						control.value(v);
+					}, 60000);
+				});
 			});
 
 		</script>
@@ -148,6 +166,7 @@
 		<style type="text/css">
 			body {
 				margin-top:2em;
+				color:white;
 			}
 			
 			.touch {
@@ -166,11 +185,26 @@
 				text-align:center;
 				width:180px;
 				box-sizing: border-box;
+				color:black;
 			}
 			
 			.inline {
 				display:inline-block;
 				vertical-align: top;
+			}
+			
+			.value {
+				width:180px;
+				height:120px;
+				font-weight:bold;
+				font-size:4em;
+				text-align:right;
+				box-sizing: border-box;
+				padding-top:5px;
+			}
+			
+			.inline span {
+				padding-left:5px;
 			}
 		</style>
     </head>
@@ -190,6 +224,11 @@
 		<div style="margin-top:4em;">
 			<img class="touch load" data-server="Color" data-group="light" data-update="colors,light" data-master="0008" src="./img/dsnone.gif" />
 			<img class="touch load" data-server="Color" data-group="light" data-group-delay="7" data-group-delayif="on" data-master="0009" src="./img/dsnone.gif" />
+			
+			<div class="inline">
+				<span>Wassertemperatur</span>
+				<div class="value" data-master="0100" data-server="Euromatik"></div>
+			</div>
 		</div>
 		
 		<div style="margin-top:1em;">
