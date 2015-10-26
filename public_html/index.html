@@ -130,7 +130,7 @@
 				$('.manual').each(function(k, v){
 					//control.update(v);
 					
-					$(v).hammer().bind("tap", function(ev) {
+					$(v).hammer().bind("tap", {threshold: 20}, function(ev) {
 						var e = $(ev.target);
 						control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value"),  function(){
 							//control.update(ev.target);
@@ -234,22 +234,26 @@
 		<div style="margin-top:1em;">
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0101" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Bunt</div>
+				<div class="label">Bunt <span style="color:grey">2</span></div>
 			</div>
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0110" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Grün</div>
+				<div class="label">Grün <span style="color:grey">11</span></div>
 			</div>
-		</div>
-		
-		<div style="margin-top:1em;">
+
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0111" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Blau</div>
+				<div class="label">Blau <span style="color:grey">12</span></div>
 			</div>
+			
 			<div class="inline">
 				<img class="touch load" data-group="colors" data-server="Color" data-master="0113" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Pastell</div>
+				<div class="label">Pastell<span style="color:grey">14</span></div>
+			</div>
+			
+			<div class="inline">
+				<img class="touch load" data-group="colors" data-server="Color" data-master="0113" data-update="colors,light" src="./img/dsnone.gif" />
+				<div class="label">Weiß<span style="color:grey">15</span></div>
 			</div>
 		</div>
 
