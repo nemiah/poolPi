@@ -57,6 +57,8 @@ $buf = "";
 while ($running) {
 	$data = dio_read($fd);
 	
+	#var_dump(unpack("H*", $data));
+		
 	#echo bin2hex(~$data)."\n";
 	if(substr(bin2hex(~$data), 0, 4) == "0000"){
 		#echo bin2hex(~$buf)."\n";
@@ -77,8 +79,8 @@ while ($running) {
 		
 		#echo count($stats);
 		
-		echo bin2hex(chbo($buf))."\n";
-		
+		#echo bin2hex(chbo($buf))."\n";
+		#var_dump(unpack("H*", $buf));
 		$buf = $data;
 	}
 	else
