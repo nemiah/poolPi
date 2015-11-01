@@ -18,21 +18,32 @@
 		
 		<script type="text/javascript">
 			var control = {
+				ignore: [],
 				IPEuromatik: 195,
 				IPColor: 174,
 				IPAttraktion: 185,
 				
-				redeemer: function(control, id, value, onSuccess){
+				redeemer: function(target, id, value, onSuccess){
 					//console.log(control);
 					//console.log(value);
+					
+					if(control.ignore[target+"_"+id])
+						return;
+					
 					var audio = new Audio('./res/confirm.mp3');
 					audio.play();
 					
+					control.ignore[target+"_"+id] = true;
+					
 					$.ajax({
-						url: "redeemer.php?control="+control+"&id="+id+"&value="+value,
+						url: "redeemer.php?control="+target+"&id="+id+"&value="+value,
 						success: function (data, textStatus, jqXHR) {
 							//console.log(data);
 							onSuccess();
+							
+							window.setTimeout(function(){
+								control.ignore[target+"_"+id] = false;
+							}, 1000);
 						}
 					});
 

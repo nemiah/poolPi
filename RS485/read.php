@@ -74,6 +74,8 @@ while ($running) {
 		
 		$stats[$c]++;
 		
+		file_put_contents("read.log", $c."\n", FILE_APPEND);
+		
 		#system('clear');
 		#print_r($stats);
 		
@@ -89,8 +91,7 @@ while ($running) {
 	#	continue;
 
 	#echo bin2hex(~$data)."\n";
-	#echo 
-  
+	#echo
 } 
 
 system('clear');
