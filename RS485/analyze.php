@@ -15,7 +15,7 @@ die();*/
 echo "<pre>";
 echo "         SY SY SY SB SA ZA KB AB FC EB\n";
 
-$za = "08";
+$za = "";
 
 $t = $mysqli->query("SELECT data, COUNT(*) AS anzahl FROM log WHERE data LIKE '0000002001$za%' GROUP BY data ORDER BY COUNT(*) DESC");
 while($r = $t->fetch_object()){
@@ -36,7 +36,7 @@ while($r = $t->fetch_object()){
 		#$ks = strtoupper($ks);
 		$sline = str_split($ks, 2);
 
-		echo "   >".str_pad($rs->anzahl, 3, " ", STR_PAD_LEFT)."x ".preg_replace('/..(?!$)/', '$0 ', strtoupper($rs->data)).": ".  strtoupper($sline[8].$sline[9])." -> ".hexdec($sline[8].$sline[9])."\n";
+		echo "   >".str_pad($rs->anzahl, 3, " ", STR_PAD_LEFT)."x ".preg_replace('/..(?!$)/', '$0 ', strtoupper($rs->data)).": ".  strtoupper($sline[7].$sline[8])." -> ".hexdec($sline[7].$sline[8])."\n";
 
 	}
 	echo "\n";
