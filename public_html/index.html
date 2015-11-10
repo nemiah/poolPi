@@ -49,6 +49,10 @@
 								control.ignore[target+"_"+id] = false;
 								return;
 							}
+							
+							if(data.type && data.type == "success")
+								$.notify(data.message, "success");
+														
 							onSuccess();
 							
 							window.setTimeout(function(){
@@ -70,7 +74,7 @@
 						$.ajax({
 							dataType: "json",
 							url: "proxy.php?control="+control["IP"+$(v).data("server")],
-							timeout: 10000,
+							timeout: 3000,
 							success: function(data) {
 								$(v).prop("src", "./img/"+data[$(v).data("master")]);
 
