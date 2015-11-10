@@ -3,9 +3,9 @@
 error_reporting(E_ERROR | E_PARSE);
 ini_set('default_socket_timeout', 7);
 
-$m = array("type" => "success", "message" => "Befehl erfolgreich");
-echo json_encode($m, JSON_UNESCAPED_UNICODE);
-die();
+#$m = array("type" => "success", "message" => "Befehl erfolgreich");
+#echo json_encode($m, JSON_UNESCAPED_UNICODE);
+#die();
 
 $control = filter_input(INPUT_GET, "control");
 $id = filter_input(INPUT_GET, "id");
