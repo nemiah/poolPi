@@ -42,7 +42,7 @@ while($r = $t->fetch_object()){
 
 	while($rs = $ts->fetch_object()){
 		$ks = strtoupper($rs->data);
-		#$ks = strtoupper($ks);
+
 		$sline = str_split($ks, 2);
 		$bytes = hexdec($sline[7]);
 		
@@ -70,10 +70,10 @@ while($r = $t->fetch_object()){
 			echo "<span style=\"color:red;\">".$sline[$i]."</span> ($bytes)";
 		
 		switch($sline[5]){
-			case "4D":
-				#echo " -> ";
+			case "36":
+				echo " -> ";
 				
-				#echo "Softwaredatum: ".toAscii(array($sline[9], $sline[10]))."; ";
+				echo "Dosierverzögerung: ".hexdec($sline[9].$sline[10]);
 			break;
 		
 			case "03":
@@ -81,9 +81,21 @@ while($r = $t->fetch_object()){
 				
 				echo "Modultyp: ".toAscii(array($sline[9], $sline[10], $sline[11], $sline[12], $sline[13], $sline[14], $sline[15], $sline[16], $sline[17], $sline[18], $sline[19], $sline[20]))."; ";
 			break;
+			case "04":
+				echo " -> ";
+				
+				$mode = "";
+				if($sline[9] == "01")
+					$mode = "Automatik";
+				if($sline[9] == "02")
+					$mode = "Manuell";
+				if($sline[9] == "04")
+					$mode = "Adaption";
+				
+				echo "Betriebsart: ".$sline[9].": $mode";
+			break;
 			case "05":
 			case "06":
-			#case "09":
 				echo " -> ";
 				
 				echo "Messwert: ".(hexdec($sline[9].$sline[10]) * 0.01)."; ";
@@ -96,9 +108,6 @@ while($r = $t->fetch_object()){
 		}
 		
 		echo "\n";
-		
-		#echo "   >".str_pad($rs->anzahl, 3, " ", STR_PAD_LEFT)."x ".preg_replace('/..(?!$)/', '$0 ', $ks)."\n";
-
 	}
 	echo "\n";
 

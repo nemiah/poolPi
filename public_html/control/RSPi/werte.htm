@@ -1,0 +1,20 @@
+<?php
+
+$db = new SQLite3('/home/pi/values.db', SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+
+$r = $db->query("SELECT * FROM poolpi");
+
+$j = "";
+while($t = $r->fetchArray()){
+	$data = json_decode($t["data"]);
+	if(!isset($data->value))
+		continue;
+		
+	$j .= '
+	"'.$t["number"].'" : "'.$data->value.'",';
+}
+
+echo '{'.$j.'
+}';
+
+?>
