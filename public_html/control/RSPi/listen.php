@@ -59,10 +59,12 @@ while ($running) {
 } 
 
 class poolPi {
+	private $values = array();
+	private $last = array();
 	private $c;
 	function __construct(){
 		
-		$this->c = new SQLite3('values.db');
+		$this->c = new SQLite3('/home/pi/values.db');
 		
 		$result = $this->c->query("SELECT name FROM sqlite_master WHERE type='table';");
 		$tables = array();
@@ -91,8 +93,29 @@ class poolPi {
 		
 		$result = $this->analyze($line);
 		
+		if(!isset($result[2]->value))
+			return;
+		
+		if(!isset($this->values[$result[0]]))
+			$this->values[$result[0]] = null;
+		
+		if(!isset($this->last[$result[0]]))
+			$this->last[$result[0]] = null;
+		
+		if($this->values[$result[0]] === $result[2]->value)
+			return;
+		
+		if(time() - $this->last[$result[0]] < 600)
+			return;
+		
+		$this->values[$result[0]] = $result[2]->value;
+		$this->last[$result[0]] = time();
+		
+		echo date("d.m.Y H:i:s").": Updating $result[1]: ".$result[2]->value."... ";
 		
 		$r = $this->c->exec("UPDATE poolpi SET data = '".SQLite3::escapeString(json_encode($result[2], JSON_UNESCAPED_UNICODE))."', name = '".SQLite3::escapeString($result[1])."' WHERE number = '".SQLite3::escapeString($result[0])."';");
+		echo "SQL Update: ".($r ? "OK" : "Fehler")."\n";
+		
 		if(!$this->c->changes()){
 			$stmt = $this->c->prepare("INSERT INTO poolpi (number, data, name) VALUES (:number, :data, :name);");
 			
@@ -102,9 +125,6 @@ class poolPi {
 			
 			$stmt->execute();
 		}
-		
-		#var_dump($r);
-
 	}
 	
 	function analyze(array $data){

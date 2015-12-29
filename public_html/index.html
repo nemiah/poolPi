@@ -26,6 +26,7 @@
 				IPEuromatik: 195,
 				IPColor: 174,
 				IPAttraktion: 185,
+				IPMessung: 179,
 				
 				redeemer: function(target, id, value, onSuccess){
 					//console.log(control);
@@ -125,8 +126,14 @@
 						dataType: "json",
 						url: "proxy.php?control="+control["IP"+$(e).data("server")],
 						success: function (data, textStatus, jqXHR) {
+							console.log(data);
 							$(e).html(data[$(e).data("master")]);
 							//onSuccess();
+						},
+						error: function(jqXHR, textStatus, errorThrown){
+							console.log(jqXHR);
+							console.log(textStatus);
+							console.log(errorThrown);
 						}
 					});
 				}
@@ -271,6 +278,16 @@
 			<div class="inline">
 				<span>Wassertemperatur</span>
 				<div class="value" data-master="0100" data-server="Euromatik"></div>
+			</div>
+			
+			<div class="inline">
+				<span>pH-Wert</span>
+				<div class="value" data-master="6" data-server="Messung"></div>
+			</div>
+			
+			<div class="inline">
+				<span>Chlor-Wert</span>
+				<div class="value" data-master="5" data-server="Messung"></div>
 			</div>
 		</div>
 		

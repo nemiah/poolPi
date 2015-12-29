@@ -1,6 +1,7 @@
 <?php
+header('Content-Type: application/json');
 
-$db = new SQLite3('/home/pi/values.db', SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+$db = new SQLite3('/home/pi/values.db', SQLITE3_OPEN_READONLY);#, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
 
 $r = $db->query("SELECT * FROM poolpi");
 
@@ -10,8 +11,8 @@ while($t = $r->fetchArray()){
 	if(!isset($data->value))
 		continue;
 		
-	$j .= '
-	"'.$t["number"].'" : "'.$data->value.'",';
+	$j .= ($j != "" ? ", " : "").'
+	"'.$t["number"].'" : "'.$data->value.'"';
 }
 
 echo '{'.$j.'
