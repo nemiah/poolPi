@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="180"
+   height="120"
+   viewBox="0 0 180 120"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r"
+   sodipodi:docname="abdstop.svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.959798"
+     inkscape:cx="113.3758"
+     inkscape:cy="70.311754"
+     inkscape:document-units="px"
+     inkscape:current-layer="g4506"
+     showgrid="false"
+     units="px"
+     inkscape:showpageshadow="false"
+     inkscape:window-width="1926"
+     inkscape:window-height="1197"
+     inkscape:window-x="1046"
+     inkscape:window-y="130"
+     inkscape:window-maximized="0"
+     showguides="false" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-932.36216)">
+    <g
+       id="g4525"
+       transform="matrix(1.29128,0,0,1.29128,19.114894,-286.61599)">
+      <g
+         transform="matrix(2.5467961,0,0,2.5467961,22.809652,970.11595)"
+         id="g4518">
+        <g
+           class="iconic-metadata"
+           id="g4502">
+          <title
+             id="title4504">Ban</title>
+        </g>
+        <g
+           class="iconic-container"
+           data-width="16"
+           data-height="16"
+           id="g4506">
+          <rect
+             rx="0.8687951"
+             style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:#aaeeff;fill-opacity:0.21395347;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
+             id="rect4155"
+             width="44.905846"
+             height="27.312744"
+             x="-9.854517"
+             y="-5.6631212"
+             ry="0.8687951" />
+          <path
+             style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:#999999;fill-opacity:1;fill-rule:nonzero;stroke:#999999;stroke-width:0.30161721;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
+             d="m -9.5844184,-4.6831037 0,25.3528597 27.9662564,0 c 0.467982,0 0.844653,-0.360186 0.844653,-0.806937 l 0,-23.7395593 c 0,-0.4467706 -0.376671,-0.8063634 -0.844653,-0.8063634 z"
+             id="rect4214"
+             inkscape:connector-curvature="0"
+             sodipodi:nodetypes="ccssssc" />
+          <rect
+             rx="0.8687951"
+             ry="0.8687951"
+             y="-5.6631212"
+             x="-9.854517"
+             height="27.312744"
+             width="44.905846"
+             id="rect4221"
+             style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:none;fill-opacity:0.21395347;fill-rule:nonzero;stroke:#656565;stroke-width:0.30407828;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate" />
+          <g
+             id="g3344"
+             transform="translate(-0.29864804,-0.7330483)">
+            <g
+               transform="translate(0.07679136,0.30716545)"
+               id="g4717">
+              <path
+                 style="fill:none;stroke:#ffffff;stroke-width:2;stroke-linejoin:round"
+                 inkscape:connector-curvature="0"
+                 class="iconic-ban-strike iconic-property-accent iconic-property-stroke"
+                 d="M 13,3 3,13"
+                 id="path4508" />
+              <circle
+                 style="fill:none;stroke:#ffffff;stroke-width:2;stroke-linejoin:round"
+                 cx="8"
+                 cy="8"
+                 r="7"
+                 class="iconic-ban-circle iconic-property-stroke"
+                 id="circle4510" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

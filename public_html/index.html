@@ -23,10 +23,13 @@
 		<script type="text/javascript">
 			var control = {
 				ignore: [],
-				IPEuromatik: 195,
-				IPColor: 174,
-				IPAttraktion: 185,
-				IPMessung: 179,
+				server: {
+					Euromatik: 195,
+					Color: 174,
+					Attraktion: 185,
+					Messung: 179
+				},
+				
 				
 				redeemer: function(target, id, value, onSuccess){
 					//console.log(control);
@@ -74,22 +77,10 @@
 					window.setTimeout(function(){
 						$.ajax({
 							dataType: "json",
-							url: "proxy.php?control="+control["IP"+$(v).data("server")],
+							url: "proxy.php?control="+control.server[$(v).data("server")],
 							timeout: 3000,
 							success: function(data) {
-								$(v).prop("src", "./img/"+data[$(v).data("master")]);
-
-								var status = "off";
-								if(data[$(v).data("master")].indexOf("_run") > 0)
-									status = "on";
-
-								if(data[$(v).data("master")].indexOf("_on") > 0)
-									status = "on";
-
-								if(data[$(v).data("master")].indexOf("-1") > 0)
-									status = "on";
-
-								$(v).data("status", status);
+								control.updateControl(v, data);
 							},
 							error: function(){
 								//$.notify("Keine Server-Verbindung", "error");
@@ -98,8 +89,25 @@
 					}, delay);
 				},
 				
+				updateControl: function(v, data){
+					var master = $(v).data("master");
+					$(v).prop("src", "./img/"+data[master].replace("gif", "svg"));
+					
+					var status = "off";
+					if(data[master].indexOf("_run") > 0)
+						status = "on";
+
+					if(data[master].indexOf("_on") > 0)
+						status = "on";
+
+					if(data[master].indexOf("-1") > 0)
+						status = "on";
+
+					$(v).data("status", status);
+				},
+				
 				tap: function(e){
-					control.redeemer(control["IP"+e.data("server")], e.data("master"), typeof e.data("value") !== "undefined" ? e.data("value") : 'i',  function(){
+					control.redeemer(control.server[e.data("server")], e.data("master"), typeof e.data("value") !== "undefined" ? e.data("value") : 'i',  function(){
 						control.update(e);
 
 						if(e.data("update")){
@@ -124,16 +132,43 @@
 				value: function(e){
 					$.ajax({
 						dataType: "json",
-						url: "proxy.php?control="+control["IP"+$(e).data("server")],
-						success: function (data, textStatus, jqXHR) {
-							console.log(data);
-							$(e).html(data[$(e).data("master")]);
-							//onSuccess();
+						url: "proxy.php?control="+control.server[$(e).data("server")],
+						success: function (data) {
+							$(e).html(data[$(e).data("master")].replace(".", ","));
 						},
 						error: function(jqXHR, textStatus, errorThrown){
 							console.log(jqXHR);
 							console.log(textStatus);
 							console.log(errorThrown);
+						}
+					});
+				},
+				
+				pollAll: function(){
+					var servers = Object.keys(control.server);
+					
+					for(var i = 0; i < servers.length; i++)
+						control.pollSingle(control.server[servers[i]], servers[i]);
+				},
+				
+				pollSingle: function(server, serverName){
+					$.ajax({
+						dataType: "json",
+						url: "proxy.php?control="+server,
+						timeout: 3000,
+						success: function(data) {
+							var elements = Object.keys(data);
+							for(var j = 0; j < elements.length; j++){
+								var v = $(".load[data-server='"+serverName+"'][data-master='"+elements[j]+"']");
+
+								if(!v.length)
+									continue;
+								
+								control.updateControl(v, data);
+							}
+						},
+						error: function(){
+
 						}
 					});
 				}
@@ -169,9 +204,10 @@
 				$('.manual').each(function(k, v){
 					//control.update(v);
 					
-					$(v).hammer().bind("tap", {threshold: 30}, function(ev) {
+					$(v).bind("touchend mouseup", function(ev) {
+					//$(v).hammer().bind("tap", {threshold: 30}, function(ev) {
 						var e = $(ev.target);
-						control.redeemer(control["IP"+e.data("server")], e.data("master"), e.data("value"),  function(){
+						control.redeemer(control.server[e.data("server")], e.data("master"), e.data("value"),  function(){
 							//control.update(ev.target);
 						});
 						
@@ -181,15 +217,22 @@
 				$('.load').each(function(k, v){
 					control.update(v);
 					
-					$(v).hammer().bind("tap", function(ev) {
+					$(v).bind("touchend mouseup", function(ev) {
 						control.tap($(ev.target));
 					});
+					
+					//$(v).hammer().bind("tap", function(ev) {
+					//	control.tap($(ev.target));
+					//});
 				});
 				
 				$('.load + .label').each(function(k, v){
-					$(v).hammer().bind("tap", function(ev) {
+					$(v).bind("touchend mouseup", function(ev) {
 						control.tap($(ev.target).prev());
 					});
+					//$(v).hammer().bind("tap", function(ev) {
+					//	control.tap($(ev.target).prev());
+					//});
 				});
 				
 				$('.value').each(function(k, v){
@@ -198,14 +241,26 @@
 						control.value(v);
 					}, 60000);
 				});
+				
+				window.setInterval(function(){
+					control.pollAll();
+				}, 30000);
+					
+				
 			});
 
 		</script>
 		
 		<style type="text/css">
+		@font-face { 
+			font-family: 'BenchNine'; 
+			src: url('BenchNine-Light.ttf') format('truetype'); 
+			font-weight: 300;
+			font-style: normal; }
+
 			body {
-				margin-top:2em;
-				color:white;
+				color:#aaa;
+				background:linear-gradient(to right, #f1f1f1 0%,#f1f1f1 210px,#ffffff 210px,#ffffff 100%);
 			}
 			#darkOverlay {
 				position:fixed;
@@ -231,11 +286,11 @@
 				padding-left:10px;
 				padding-right:10px;
 				cursor: pointer;
-				font-size:2em;
+				font-size:1.8em;
 				text-align:center;
 				width:180px;
 				box-sizing: border-box;
-				color:black;
+				color:#999999;
 			}
 			
 			.inline {
@@ -253,71 +308,135 @@
 				padding-top:5px;
 			}
 			
-			.inline span {
-				padding-left:5px;
+			.valueLabel {
+				font-family: 'BenchNine', sans-serif;
+				font-weight:300;
+				color:#777;
+				margin-top:.3em;
+			}
+			
+			.container {
+				padding-top:1.9em;
+				padding-bottom:1.6em;
+				border-bottom:1px solid #ddd;
+				height:120px;
+			}
+			
+			.container:last-child {
+				border-bottom:0;
+			}
+			
+			.left {
+				display:inline-block;
+				vertical-align:top;
+				width:calc(100% - 200px);
+				box-sizing: border-box;
+			}
+			
+			.right {
+				display:inline-block;
+				vertical-align:top;
+				width:190px;
+				box-sizing: border-box;
+				padding-left:1em;
+				border-left:1px solid #ddd;
+			}
+			
+			.right .container {
+				border-bottom:0;
+			}
+			
+			.rowLabel {
+				color:#777;
+				text-align:right;
+				font-size:1.4em;
+				display:inline-block;
+				width:180px;
+				height:auto;
+				vertical-align:top;
+				margin-top:.3em;
+				font-family: 'BenchNine', sans-serif;
+				font-weight:300;
+				margin-right:1em;
 			}
 		</style>
     </head>
     <body>
-		<div>
-			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="1" src="./img/abdzu-0.gif" />
-			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="0" src="./img/abdstop.gif" />
-			<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="2" src="./img/abdauf-0.gif" />
-		</div>
-		
-		<div style="margin-top:4em;">
-			<img class="touch load" data-server="Attraktion" data-master="0017" src="./img/dsnone.gif" />
-			<img class="touch load" data-server="Attraktion" data-master="0018" src="./img/dsnone.gif" />
-			<img class="touch load" data-server="Attraktion" data-master="0021" src="./img/dsnone.gif" />
-		</div>
-		
-		<div style="margin-top:4em;">
-			<img class="touch load" data-server="Color" data-group="light" data-update="colors,light" data-master="0008" src="./img/dsnone.gif" />
-			<img class="touch load" data-server="Color" data-group="light" data-group-delay="7" data-group-delayif="on" data-master="0009" src="./img/dsnone.gif" />
+		<div class="left">
+			<div class="container">
+				<div class="rowLabel">Abdeckung</div>
+				
+				<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="1" src="./img/abdzu-0.svg" />
+				<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="0" src="./img/abdstop.svg" />
+				<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="2" src="./img/abdauf-0.svg" />
+			</div>
+
 			
-			<div class="inline">
-				<span>Wassertemperatur</span>
+			<div class="container">
+				<div class="rowLabel">Attraktionen</div>
+				
+				<img class="touch load" data-server="Attraktion" data-master="0017" src="./img/dsnone.svg" />
+				<img class="touch load" data-server="Attraktion" data-master="0018" src="./img/dsnone.svg" />
+				<img class="touch load" data-server="Attraktion" data-master="0021" src="./img/dsnone.svg" />
+			</div>
+
+			<div class="container">
+				<div class="rowLabel">Licht</div>
+				
+				<img class="touch load" data-server="Color" data-group="light" data-update="colors,light" data-master="0008" src="./img/dsnone.svg" />
+				<img class="touch load" data-server="Color" data-group="light" data-group-delay="7" data-group-delayif="on" data-master="0009" src="./img/dsnone.svg" />
+
+
+				<div style="margin-top:1em;">
+					<div class="rowLabel">&nbsp;</div>
+				
+					<div class="inline">
+						<img class="touch load" data-group="colors" data-server="Color" data-master="0101" data-update="colors,light" src="./img/dsnone.svg" />
+						<div class="label">Bunt</div>
+					</div>
+					<div class="inline">
+						<img class="touch load" data-group="colors" data-server="Color" data-master="0110" data-update="colors,light" src="./img/dsnone.svg" />
+						<div class="label">Grün</div>
+					</div>
+
+					<div class="inline">
+						<img class="touch load" data-group="colors" data-server="Color" data-master="0111" data-update="colors,light" src="./img/dsnone.svg" />
+						<div class="label">Blau</div>
+					</div>
+
+					<div class="inline">
+						<img class="touch load" data-group="colors" data-server="Color" data-master="0113" data-update="colors,light" src="./img/dsnone.svg" />
+						<div class="label">Pastell</div>
+					</div>
+
+					<div class="inline">
+						<img class="touch load" data-group="colors" data-server="Color" data-master="0114" data-update="colors,light" src="./img/dsnone.svg" />
+						<div class="label">Weiß</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="right">
+			<div class="container">
+				<div class="valueLabel">Wassertemperatur</div>
 				<div class="value" data-master="0100" data-server="Euromatik"></div>
 			</div>
-			
-			<div class="inline">
-				<span>pH-Wert</span>
+
+			<div class="container">
+				<div class="valueLabel">pH-Wert</div>
 				<div class="value" data-master="6" data-server="Messung"></div>
 			</div>
-			
-			<div class="inline">
-				<span>Chlor-Wert</span>
+
+			<div class="container">
+				<div class="valueLabel">Chlor-Wert</div>
 				<div class="value" data-master="5" data-server="Messung"></div>
 			</div>
 		</div>
-		
-		<div style="margin-top:1em;">
-			<div class="inline">
-				<img class="touch load" data-group="colors" data-server="Color" data-master="0101" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Bunt <span style="color:grey">2</span></div>
-			</div>
-			<div class="inline">
-				<img class="touch load" data-group="colors" data-server="Color" data-master="0110" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Grün <span style="color:grey">11</span></div>
-			</div>
-
-			<div class="inline">
-				<img class="touch load" data-group="colors" data-server="Color" data-master="0111" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Blau <span style="color:grey">12</span></div>
-			</div>
-			
-			<div class="inline">
-				<img class="touch load" data-group="colors" data-server="Color" data-master="0113" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Pastell<span style="color:grey">14</span></div>
-			</div>
-			
-			<div class="inline">
-				<img class="touch load" data-group="colors" data-server="Color" data-master="0114" data-update="colors,light" src="./img/dsnone.gif" />
-				<div class="label">Weiß<span style="color:grey">15</span></div>
-			</div>
-		</div>
-
-		
 		<div id="darkOverlay" style="display: none; background-color:black;"></div>
+		<script type="text/javascript">
+			$(function(){
+				$(".right").css("height", $(window).height() - parseFloat($("body").css("padding-top")) * 2);
+			});
+		</script>
     </body>
 </html>
