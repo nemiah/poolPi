@@ -86,7 +86,7 @@ class mpoolAnzeigeGUI extends anyC implements iGUIHTMLMP2 {
 
 	private function row(poolAnzeige $A){
 		$html = "
-			<div style=\"height:120px;padding-top:30px;padding-bottom:25px;border-bottom: 1px solid #ddd;\">";
+			<div style=\"height:auto;padding-top:30px;padding-bottom:25px;border-bottom: 1px solid #ddd;\">";
 		
 		$I = new HTMLInput("poolAnzeigeName", "text", $A->A("poolAnzeigeName"));
 		$I->activateMultiEdit("poolAnzeige", $A->getID());
@@ -103,17 +103,28 @@ class mpoolAnzeigeGUI extends anyC implements iGUIHTMLMP2 {
 					$I$B
 				</div>";
 		
+		$close = 0;
 		$AC = anyC::get("poolAnzeigeControl", "poolAnzeigeControlpoolAnzeigeID", $A->getID());
 		$AC->addOrderV3("poolAnzeigeControlOrder");
 		$AC->addOrderV3("poolAnzeigeControlID");
-		while($C = $AC->n())
+		while($C = $AC->n()){
+			if($C->A("poolAnzeigeControlNewLine")){
+				$html .= "<div style=\"margin-top:15px;\">
+					<div style=\"display: inline-block;width: 195px;height: 120px;vertical-align: top;margin-top: 7px;margin-right: 21px;\"></div>";
+				$close++;
+			}
+			
 			$html .= $this->control($C);
+		}
 		
 		$B = new Button("Element\nhinzufügen", "new");
 		$B->style("margin:10px;display:inline-block;vertical-align:top;");
 		$B->popup("", "Element hinzufügen", "mpoolAnzeige", "-1", "addElementPopup", array($A->getID()));
 		$html .= $B;
 		
+		
+		for($i = 0; $i < $close; $i++)
+			$html .= "</div>";
 		$html .= "</div>";
 		
 		return $html;

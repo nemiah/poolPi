@@ -30,6 +30,7 @@ class poolAnzeigeControlGUI extends poolAnzeigeControl implements iGUIHTML2 {
 		$gui->attributes(array(
 			"poolAnzeigeControlCaption",
 			"poolAnzeigeControlLabel",
+			"poolAnzeigeControlNewLine",
 			#"poolAnzeigeControlOrder",
 			"poolAnzeigeControlClass",
 			"poolAnzeigeControlSrc",
@@ -42,6 +43,7 @@ class poolAnzeigeControlGUI extends poolAnzeigeControl implements iGUIHTML2 {
 			"poolAnzeigeControlGroupDelayIf"
 		));
 		
+		$gui->label("poolAnzeigeControlNewLine", "Neue Zeile");
 		$gui->label("poolAnzeigeControlCaption", "Überschrift");
 		$gui->label("poolAnzeigeControlLabel", "Beschriftung");
 		$gui->label("poolAnzeigeControlOrder", "Reihenfolge");
@@ -53,6 +55,7 @@ class poolAnzeigeControlGUI extends poolAnzeigeControl implements iGUIHTML2 {
 		$gui->label("poolAnzeigeControlUpdate", "Update Gruppe(n)");
 		$gui->label("poolAnzeigeControlGroupDelayIf", "Wenn");
 		
+		$gui->type("poolAnzeigeControlNewLine", "checkbox");
 		$gui->type("poolAnzeigeControlServer", "readonly");
 		$gui->type("poolAnzeigeControlClass", "select", array("manual" => "Statisch", "load" => "Laden", "value" => "Wert"));
 		$gui->type("poolAnzeigeControlGroupDelayIf", "select", array("" => "ohne", "on" => "Ein"));
@@ -60,6 +63,7 @@ class poolAnzeigeControlGUI extends poolAnzeigeControl implements iGUIHTML2 {
 			$gui->type ("poolAnzeigeControlMaster", "select", poolAnzeigeControl::values ($this->A("poolAnzeigeControlMasterValues")));
 		
 		$gui->descriptionField("poolAnzeigeControlUpdate", "Mehrere Gruppen durch Komma trennen");
+		$gui->descriptionField("poolAnzeigeControlNewLine", "Fügt eine neue Zeile vor dem Element ein");
 		
 		$gui->space("poolAnzeigeControlClass");
 		$gui->space("poolAnzeigeControlServer");

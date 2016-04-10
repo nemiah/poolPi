@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!-- 
+<?php
+/**
  *  This file is part of poolPi.
 
  *  poolPi is free software; you can redistribute it and/or modify
@@ -16,24 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses></http:>.
  * 
  *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
--->
-<phynx>
-	<plugin>
-		<name>poolAnzeige</name>
-		<menuName>Anzeige</menuName>
-		<collection>mpoolAnzeige</collection>
-		
-		<icon>./poolPi/Anzeige/poolAnzeige.png</icon>
-		<folder>Anzeige</folder>
-		<menuEntryTarget>contentScreen</menuEntryTarget>
+ */
 
-		<adminOnly>false</adminOnly>
-		
-		<version>0.1</version>
-
-		<deploy>
-			<table name="poolAnzeige" />
-			<table name="poolAnzeigeControl" />
-		</deploy>
-	</plugin>
-</phynx>
+class mpoolAnzeige extends anyC {
+	
+}
+?>

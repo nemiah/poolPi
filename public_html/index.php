@@ -1,3 +1,59 @@
+<?php
+/**
+ *  This file is part of poolPi.
+
+ *  poolPi is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3 of the License, or
+ *  (at your option) any later version.
+
+ *  poolPi is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses></http:>.
+ * 
+ *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ */
+
+session_name("pool_".sha1(__FILE__));
+define("PHYNX_NO_SESSION_RELOCATION", true);
+
+require "./backend/system/connect.php";
+require_once './backend/ubiquitous/CustomerPage/CCPage.class.php';
+require_once './poolPi.class.php';
+
+$P = new CCPage();
+$P->loadPlugin("poolPi", "Steuerung");
+$P->loadPlugin("poolPi", "Anzeige");
+
+$servers = "";
+$AC = anyC::get("poolSteuerung");
+while($S = $AC->n())
+	$servers .= ($servers != "" ? ",\n					" : "").$S->A("poolSteuerungTyp").": \"".$S->A("poolSteuerungIP")."\"";
+
+$left = "";
+$right = "";
+
+$AC = anyC::get("poolAnzeige", "poolAnzeigeTyp", "row");
+$AC->addOrderV3("poolAnzeigeOrder");
+$AC->addOrderV3("poolAnzeigeID");
+
+while($A = $AC->n())
+	$left .= poolPi::row($A);
+
+
+$AC = anyC::get("poolAnzeige", "poolAnzeigeTyp", "col");
+$AC->addOrderV3("poolAnzeigeOrder");
+$AC->addOrderV3("poolAnzeigeID");
+
+$A = $AC->n();
+if($A != null)
+	$right = poolPi::col($A);
+?>
+
 <!doctype html>
 <html class="no-js" lang="">
     <head>
@@ -24,10 +80,8 @@
 		<script type="text/javascript">
 			var control = {
 				server: {
-					Euromatik: "192.168.0.195",
-					Color: "192.168.0.174",
-					Attraktion: "192.168.0.185",
-					Messung: "192.168.0.179"
+					<?php echo $servers; ?>
+				
 				}
 			};
 			
@@ -40,7 +94,8 @@
     </head>
     <body>
 		<div class="left">
-			<div class="container">
+			<?php echo $left; ?>
+			<!--<div class="container">
 				<div class="rowLabel">Abdeckung</div>
 				
 				<img class="touch manual" data-server="Euromatik" data-master="0033" data-value="1" src="./img/abdzu-0.svg" />
@@ -101,11 +156,12 @@
 						<div class="colorLabel">Weiß</div>
 					</div>
 				</div>
-			</div>
+			</div>-->
 		</div>
 		
 		<div class="right">
-			<div class="container">
+			<?php echo $right; ?>
+			<!--<div class="container">
 				<div class="valueLabel">Wassertemperatur</div>
 				<div class="value" data-master="0100" data-server="Euromatik"></div>
 			</div>
@@ -118,7 +174,7 @@
 			<div class="container">
 				<div class="valueLabel">Chlor-Wert</div>
 				<div class="value" data-master="5" data-server="Messung"></div>
-			</div>
+			</div>-->
 		</div>
 		
 		<div id="darkOverlay" style="display: none; background-color:black;"></div>
