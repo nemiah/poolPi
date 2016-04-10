@@ -369,7 +369,10 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			
 			if(PHYNX_MAIN_STORAGE == "MySQL") {
 				try {
-					$DB1 = new DBStorageU();
+					if(!function_exists("mysql_pconnect"))
+						throw new Exception ();
+					
+						$DB1 = new DBStorageU();
 					
 					$BN = new Button("Hinweis", "notice", "icon");
 					$BN->style("float:left;margin-right:10px;");

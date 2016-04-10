@@ -1223,8 +1223,11 @@ class HTMLGUI implements icontextMenu {
 						$cf = $as[$j];
 						$t = $this->invokeParser($this->parsers[$as[$j]], $sc->$cf, $parameters);
 					}
-					else $t = htmlspecialchars($sc->$as[$j]);
-
+					else {
+						$v = $as[$j];
+						$t = htmlspecialchars($sc->$v);
+					}
+					
 					if($this->multiEditMode != null AND in_array($as[$j], $this->multiEditMode)) $string .= "
 					<td><input onfocus=\"oldValue = this.value;\" onblur=\"if(oldValue != this.value) saveMultiEditInput('".$this->singularClass."','".$aid."','".$as[$j]."');\" onkeydown=\"if(event.keyCode == 13) saveMultiEditInput('".$this->singularClass."','$aid','".$as[$j]."');\" type=\"text\" id=\"".$as[$j]."ID$aid\" value=\"".htmlspecialchars($t)."\" class=\"multiEditInput2\" /></td>";
 					else $string .= "
