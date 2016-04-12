@@ -25,7 +25,7 @@ if(function_exists("pcntl_signal")){
 
 $pi = new poolPi();
 
-$fd = dio_open('/dev/ttyAMA0', O_RDONLY | O_NOCTTY);# | O_NONBLOCK);
+$fd = dio_open('/dev/ttyUSB0', O_RDONLY | O_NOCTTY);# | O_NONBLOCK);
 
 dio_fcntl($fd, F_SETFL, O_SYNC);
 
