@@ -64,7 +64,7 @@ class poolPi {
 	private $c;
 	function __construct(){
 		
-		$this->c = new SQLite3('/home/pi/values.db');
+		$this->c = new SQLite3('/home/pi/poolPi/RSPi/values.db');
 		
 		$result = $this->c->query("SELECT name FROM sqlite_master WHERE type='table';");
 		$tables = array();
