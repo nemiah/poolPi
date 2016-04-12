@@ -31,8 +31,18 @@ $P->loadPlugin("poolPi", "Anzeige");
 
 $servers = "";
 $AC = anyC::get("poolSteuerung");
-while($S = $AC->n())
-	$servers .= ($servers != "" ? ",\n					" : "").$S->A("poolSteuerungTyp").": \"".$S->A("poolSteuerungIP")."\"";
+try {
+	while($S = $AC->n())
+		$servers .= ($servers != "" ? ",\n					" : "").$S->A("poolSteuerungTyp").": \"".$S->A("poolSteuerungIP")."\"";
+} catch(NoDBUserDataException $e){
+	emoFatalError("poolPi kann leider keine Verbindung zur Datenbank herstellen","Es wurden noch keine Datenbankzugangsdaten eingetragen.<br />Bitte benutzen Sie das Installations-Plugin im Admin-Bereich von <a href=\"$phpFWPath\">multiCMS</a>","multiCMS", $phpFWPath);
+} catch(TableDoesNotExistException $e){
+	emoFatalError("multiCMS kann leider eine oder mehrere Tabellen nicht finden","Die multiCMS Datenbank-Tabellen wurden vermutlich nicht korrekt angelegt.<br />Bitte benutzen Sie das Installations-Plugin im Admin-Bereich von <a href=\"$phpFWPath\">multiCMS</a>","multiCMS", $phpFWPath);
+} catch(FieldDoesNotExistException $e){
+	die("Ein oder mehrere Felder wurden in der Datenbank nicht gefunden.<br />Bitte benutzen Sie das Installations-Plugin von <a href=\"$phpFWPath\">multiCMS</a>:".$e->getErrorMessage());
+} catch (Exception $e){
+	emoFatalError("Es ist leider ein unvorhergesehener Fehler aufgetreten","Falls Ihnen folgender Fehler nichts sagt, wenden Sie sich bitte mit der Fehlermeldung an das <a href=\"http://forum.furtmeier.it\">Support-Forum</a>:<h2>".get_class($e)."</h2><pre>".$e->getTraceAsString()."</pre>","multiCMS", $phpFWPath);
+}
 
 $left = "";
 $right = "";
