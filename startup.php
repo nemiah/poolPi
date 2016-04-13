@@ -25,7 +25,7 @@ while($running){
 	
 	echo "Die IP-Adresse des Systems lautet:\n";
 	foreach($ips AS $ip){
-		if(strpos(":", $ip) !== false)
+		if(strpos($ip, ":") !== false)
 			continue;
 			
 		echo $ip."\n";
