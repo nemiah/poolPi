@@ -46,6 +46,7 @@ iface eth1 inet static
         gateway ".$this->A("SystemSetting3")."
         dns-nameservers ".$this->A("SystemSetting4")."
 ";
+			echo "sudo echo '$data' > /etc/network/interfaces.d/eth1.conf";
 			echo shell_exec("sudo echo '$data' > /etc/network/interfaces.d/eth1.conf");
 		}
 		
