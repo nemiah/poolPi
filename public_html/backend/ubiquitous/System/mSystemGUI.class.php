@@ -19,7 +19,7 @@
  */
 
 class mSystemGUI extends anyC implements iGUIHTMLMP2 {
-
+	
 	public function getHTML($id, $page){
 		$this->loadMultiPageMode($id, $page, 0);
 
@@ -30,9 +30,48 @@ class mSystemGUI extends anyC implements iGUIHTMLMP2 {
 		
 		$gui->attributes(array());
 		
+		$gui->options(true, true, false);
+		
+		$B = $gui->addSideButton("Neue\nEinstellung", "new");
+		$B->popup("", "Neue Einstellung", "mSystem", "-1", "addSettingPopup");
+		
+		$B = $gui->addSideButton("System\nneu starten", "./ubiquitous/System/cog.png");
+		$B->popup("", "System neu starten", "mSystem", "-1", "reboot");
+		
 		return $gui->getBrowserHTML($id);
 	}
 
+	public function reboot(){
+		echo exec("sudo reboot");
+	}
+	
+	public function addSettingPopup(){
+		$T = new HTMLTable(2);
+		$T->setColWidth(1, 20);
+		$T->useForSelection(false);
+		
+		$S = new System(1);
+		
+		$B = new Button("Eintrag erstellen", "./images/i2/cart.png", "icon");
+		foreach($S->types AS $k => $v){
+			$T->addRow(array(
+				$B,
+				$v->name
+			));
+
+			$T->addRowEvent("click", OnEvent::rme($this, "addSettingNew", array("'$k'"), "function(t){ ".OnEvent::closePopup("mSystem").OnEvent::reload("Right")." contentManager.loadFrame('contentLeft', 'System', t.responseText); }"));		
+		}
+		
+		echo $T;
+	}
+	
+	public function addSettingNew($type){
+		$F = new Factory("System");
+		
+		$F->sA("SystemType", $type);
+		
+		echo $F->store();
+	}
 
 }
 ?>

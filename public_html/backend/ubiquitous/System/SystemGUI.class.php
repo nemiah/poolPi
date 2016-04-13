@@ -21,8 +21,19 @@ class SystemGUI extends System implements iGUIHTML2 {
 	function getHTML($id){
 		$gui = new HTMLGUIX($this);
 		$gui->name("System");
-	
-		return $gui->getEditHTML();
+		
+		$d = $this->types[$this->A("SystemType")];
+		
+		$gui->attributes($d->attributes);
+		
+		foreach($d->labels AS $k => $b)
+			$gui->label($k, $b);
+		
+		$message = "";
+		if($this->A("SystemType") == "ip")
+			$message = "<p class=\"highlight\">Die Änderungen wirken sich erst nach einem Neustart des Systems aus!</p>";
+		
+		return $message.$gui->getEditHTML();
 	}
 }
 ?>

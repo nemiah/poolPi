@@ -18,5 +18,22 @@
  *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
  */
 class System extends PersistentObject {
+
+	public $types = array();
+	public function __construct($id) {
+		parent::__construct($id);
+		
+		$ip = new stdClass();
+		$ip->attributes = array("SystemSetting1", "SystemSetting2", "SystemSetting3", "SystemSetting4");
+		$ip->labels = array(
+			"SystemSetting1" => "IP-Adresse", 
+			"SystemSetting2" => "Netzmaske", 
+			"SystemSetting3" => "Gateway", 
+			"SystemSetting4" => "DNS-Server"
+		);
+		$ip->name = "IP-Adresse";
+		
+		$this->types["ip"] = $ip;
+	}
 }
 ?>
