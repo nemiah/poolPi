@@ -39,15 +39,28 @@ class System extends PersistentObject {
 	public function saveMe($checkUserData = true, $output = false) {
 		
 		if($this->A("SystemType") == "ip"){
-			$data = "allow-hotplug eth1
-iface eth1 inet static
-        address ".$this->A("SystemSetting1")."
-        netmask ".$this->A("SystemSetting2")."
-        gateway ".$this->A("SystemSetting3")."
-        dns-nameservers ".$this->A("SystemSetting4")."
+			$data = "
+hostname
+clientid
+persistent
+option rapid_commit
+
+option domain_name_servers, domain_name, domain_search, host_name
+option classless_static_routes
+option ntp_servers
+require dhcp_server_identifier
+
+slaac private
+
+nohook lookup-hostname
+
+interface eth0
+static ip_address=".$this->A("SystemSetting1")."/".$this->A("SystemSetting2")."
+static routers=".$this->A("SystemSetting3")."
+static domain_name_servers=".$this->A("SystemSetting4")."
 ";
-			echo "sudo echo '$data' > /etc/network/interfaces.d/eth1.conf";
-			echo shell_exec("sudo echo '$data' > /etc/network/interfaces.d/eth1.conf");
+			echo "sudo echo '$data' > /etc/dhcpcd.conf";
+			echo shell_exec("sudo echo '$data' > /etc/dhcpcd.conf 2>&1");
 		}
 		
 		parent::saveMe($checkUserData, $output);
