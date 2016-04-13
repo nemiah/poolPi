@@ -8,7 +8,7 @@ sudo aptitude -y install php5 php5-dev php-pear php5-sqlite supervisor
 sudo pecl -d preferred_state=beta install dio
 sudo sed -i 2'i\extension=dio.so' '/etc/php5/cli/php.ini'
 
-sudo echo "\nwww-data        ALL=(ALL) NOPASSWD: /sbin/reboot" > /etc/sudoers
+sudo echo "\nwww-data        ALL=(ALL) NOPASSWD: /sbin/reboot" >> /etc/sudoers
 
 chmod 666 public_html/backend/system/DBData/Installation.pfdb.php
 

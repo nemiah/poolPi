@@ -36,13 +36,14 @@ class mSystemGUI extends anyC implements iGUIHTMLMP2 {
 		$B->popup("", "Neue Einstellung", "mSystem", "-1", "addSettingPopup");
 		
 		$B = $gui->addSideButton("System\nneu starten", "./ubiquitous/System/cog.png");
-		$B->popup("", "System neu starten", "mSystem", "-1", "reboot");
+		$B->doBefore("if(confirm('Das System neu starten?')) %AFTER");
+		$B->rmePCR("mSystem", "-1", "reboot");
 		
 		return $gui->getBrowserHTML($id);
 	}
 
 	public function reboot(){
-		echo shell_exec("sudo -S reboot 2>&1");
+		echo shell_exec("sudo reboot 2>&1");
 	}
 	
 	public function addSettingPopup(){

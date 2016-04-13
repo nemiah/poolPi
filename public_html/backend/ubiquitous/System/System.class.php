@@ -35,5 +35,21 @@ class System extends PersistentObject {
 		
 		$this->types["ip"] = $ip;
 	}
+	
+	public function saveMe($checkUserData = true, $output = false) {
+		parent::saveMe($checkUserData, $output);
+		
+		if($this->A("SystemType") == "ip"){
+			$data = "allow-hotplug eth1
+iface eth1 inet static
+        address ".$this->A("SystemSetting1")."
+        netmask ".$this->A("SystemSetting2")."
+        gateway ".$this->A("SystemSetting3")."
+        dns-nameservers ".$this->A("SystemSetting4")."
+";
+			shell_exec("echo '$data' > /etc/network/interfaces.d/eth1.conf");
+		}
+		
+	}
 }
 ?>

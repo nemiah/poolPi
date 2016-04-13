@@ -30,10 +30,28 @@ class SystemGUI extends System implements iGUIHTML2 {
 			$gui->label($k, $b);
 		
 		$message = "";
-		if($this->A("SystemType") == "ip")
+		if($this->A("SystemType") == "ip"){
+			$B = $gui->addSideButton("Aktuelle\nWerte", "computer");
+			$B->popup("", "Aktuelle Werte", "System", $this->getID(), "ipCurrentPopup", "", "", "{width:600}");
+			
+			$B = $gui->addSideButton("Aktuelle\nEinstellungen", "computer");
+			$B->popup("", "Aktuelle Werte", "System", $this->getID(), "ipSettingsPopup", "", "", "{width:600}");
+			
 			$message = "<p class=\"highlight\">Die Änderungen wirken sich erst nach einem Neustart des Systems aus!</p>";
-		
+		}
 		return $message.$gui->getEditHTML();
+	}
+	
+	function ipCurrentPopup(){
+		echo "<pre style=\"font-size:10px;padding:5px;\">";
+		echo shell_exec("ifconfig");
+		echo "</pre>";
+	}
+	
+	function ipSettingsPopup(){
+		echo "<pre style=\"font-size:10px;padding:5px;\">";
+		echo shell_exec("cat /etc/network/interfaces");
+		echo "</pre>";
 	}
 }
 ?>
