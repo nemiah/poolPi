@@ -42,7 +42,7 @@ class mSystemGUI extends anyC implements iGUIHTMLMP2 {
 	}
 
 	public function reboot(){
-		echo shell_exec("sudo reboot 2>&1");
+		echo shell_exec("sudo -S reboot 2>&1");
 	}
 	
 	public function addSettingPopup(){
