@@ -24,16 +24,39 @@ class System extends PersistentObject {
 		parent::__construct($id);
 		
 		$ip = new stdClass();
-		$ip->attributes = array("SystemSetting1", "SystemSetting2", "SystemSetting3", "SystemSetting4");
+		$ip->attributes = array("SystemSetting1"/*, "SystemSetting2"*/, "SystemSetting3", "SystemSetting4");
 		$ip->labels = array(
 			"SystemSetting1" => "IP-Adresse", 
-			"SystemSetting2" => "Netzmaske", 
+			#"SystemSetting2" => "Netzmaske", 
 			"SystemSetting3" => "Gateway", 
 			"SystemSetting4" => "DNS-Server"
 		);
 		$ip->name = "IP-Adresse";
 		
 		$this->types["ip"] = $ip;
+	}
+	
+	public function deleteMe() {
+		if($this->A("SystemType") == "ip"){
+			$data = "
+hostname
+clientid
+persistent
+option rapid_commit
+
+option domain_name_servers, domain_name, domain_search, host_name
+option classless_static_routes
+option ntp_servers
+require dhcp_server_identifier
+
+slaac private
+
+nohook lookup-hostname
+";
+			echo shell_exec("sudo 'echo \"$data\" > /etc/dhcpcd.conf 2>&1");
+		}
+		
+		return parent::deleteMe();
 	}
 	
 	public function saveMe($checkUserData = true, $output = false) {
@@ -55,12 +78,12 @@ slaac private
 nohook lookup-hostname
 
 interface eth0
-static ip_address=".$this->A("SystemSetting1")."/".$this->A("SystemSetting2")."
+static ip_address=".$this->A("SystemSetting1")."/24
 static routers=".$this->A("SystemSetting3")."
 static domain_name_servers=".$this->A("SystemSetting4")."
 ";
-			echo "sudo echo '$data' > /etc/dhcpcd.conf";
-			echo shell_exec("sudo echo '$data' > /etc/dhcpcd.conf 2>&1");
+			echo "sudo 'echo \"$data\" > /etc/dhcpcd.conf'";
+			echo shell_exec("sudo 'echo \"$data\" > /etc/dhcpcd.conf' 2>&1");
 		}
 		
 		parent::saveMe($checkUserData, $output);
