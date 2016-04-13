@@ -53,7 +53,7 @@ slaac private
 
 nohook lookup-hostname
 ";
-			echo shell_exec("echo '$data' | tee /etc/dhcpcd.conf 2>&1");
+			echo shell_exec("echo '$data' | sudo tee /etc/dhcpcd.conf 2>&1");
 		}
 		
 		return parent::deleteMe();
@@ -82,8 +82,8 @@ static ip_address=".$this->A("SystemSetting1")."/24
 static routers=".$this->A("SystemSetting3")."
 static domain_name_servers=".$this->A("SystemSetting4")."
 ";
-			echo "echo '$data' | tee /etc/dhcpcd.conf";
-			echo shell_exec("echo '$data' | tee /etc/dhcpcd.conf 2>&1");
+			echo "echo '$data' | sudo tee /etc/dhcpcd.conf";
+			echo shell_exec("echo '$data' | sudo tee /etc/dhcpcd.conf 2>&1");
 		}
 		
 		parent::saveMe($checkUserData, $output);
