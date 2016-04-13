@@ -15,6 +15,8 @@ system('clear');
 
 
 while($running){
+	$ips = explode(" ", exec("hostname --all-ip-addresses"));
+	
 	system('clear');
 	
 	echo "Willkommen bei poolPi!\n";
@@ -22,7 +24,8 @@ while($running){
 	echo "\n";
 	
 	echo "Die IP-Adresse des Systems lautet:\n";
-	echo getHostByName(getHostName())."\n";
+	foreach($ips AS $ip)
+		echo $ip."\n";
 	
 	sleep(1);
 }
