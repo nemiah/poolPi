@@ -18,17 +18,17 @@ while($running){
 	$ips = explode(" ", exec("hostname --all-ip-addresses"));
 	
 	system('clear');
-	
-	echo "Willkommen bei poolPi!\n";
-	echo date("d.m.Y H:i:s")."\n";
+	echo "\n";
+	echo " Willkommen bei poolPi!\n";
+	echo " ".date("d.m.Y H:i:s")."\n";
 	echo "\n";
 	
-	echo "Die IP-Adresse des Systems lautet:\n";
+	echo " Die IP-Adresse des Systems lautet:\n";
 	foreach($ips AS $ip){
 		if(strpos($ip, ":") !== false)
 			continue;
 			
-		echo $ip."\n";
+		echo " ".$ip."\n";
 	}
 	
 	sleep(1);
