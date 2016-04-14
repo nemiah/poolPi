@@ -33,7 +33,18 @@ while($running){
 	echo " shutdown - Fährt das System herunter\n";
 	echo " exit     - Beendet diese Anwendung\n";
 	
+	echo " off     - Beendet diese Anwendung\n";
+	echo " on     - Beendet diese Anwendung\n";
+	
 	echo "\n";
+	
+	if($lin == "on"){
+		exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
+	}
+	
+	if($lin == "off"){
+		exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
+	}
 	
 	if($line == "ip"){
 		echo " Die IP-Adresse des Systems lautet:\n";
