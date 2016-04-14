@@ -55,25 +55,26 @@ while($running){
 		exec("killall ssh");
 	}
 	
-	echo "\n";
-	$line = readline(" Befehl: ");
-	#echo $line;
 	if($line == "exit"){
 		echo " Beende...\n";
 		die();
 	}
 	
-	if($line == "sudo reboot"){
+	if($line == "reboot"){
 		echo " Neustart...\n";
-		shell_exec("reboot");
+		shell_exec("sudo reboot");
 		exit;
 	}
 	
-	if($line == "sudo shutdown"){
+	if($line == "shutdown"){
 		echo " Fahre herunter...\n";
-		shell_exec("shutdown -h now");
+		shell_exec("sudo shutdown -h now");
 		exit;
 	}
+	
+	echo "\n";
+	$line = readline(" Befehl: ");
+	#echo $line;
 		
 	#sleep(1);
 }
