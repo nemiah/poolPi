@@ -63,13 +63,13 @@ while($running){
 		die();
 	}
 	
-	if($line == "reboot"){
+	if($line == "sudo reboot"){
 		echo " Neustart...\n";
 		shell_exec("reboot");
 		exit;
 	}
 	
-	if($line == "shutdown"){
+	if($line == "sudo shutdown"){
 		echo " Fahre herunter...\n";
 		shell_exec("shutdown -h now");
 		exit;
