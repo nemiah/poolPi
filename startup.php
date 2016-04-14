@@ -38,11 +38,11 @@ while($running){
 	
 	echo "\n";
 	
-	if($lin == "on"){
+	if($line == "on"){
 		exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
 	}
 	
-	if($lin == "off"){
+	if($line == "off"){
 		exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
 	}
 	
