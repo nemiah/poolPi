@@ -1,22 +1,32 @@
 <?php
-declare(ticks=1);
 
-$running = true;
-function signalHandler($signo) {
-    global $running;
-    $running = false;
-    echo " Beende...\n";
-}
-
-pcntl_signal(SIGINT, 'signalHandler');
-
-#sleep(5);
+exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
 system('clear');
 
-$line = null;
-while($running){
-	$ips = explode(" ", exec("hostname --all-ip-addresses"));
-	
+function stty($options) {
+  exec($cmd = "/bin/stty $options", $output, $el);
+  $el AND die("exec($cmd) failed");
+  return implode(" ", $output);
+}
+
+
+function turnOn(){
+	exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
+}
+
+function turnOff(){
+	exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
+}
+
+
+$stty_settings = preg_replace("#.*; ?#s", "", stty("--all"));
+
+stty("cbreak -echo");
+
+$line = "";
+$buffer = "";
+while(1){
+	turnOn();
 	system('clear');
 	echo "\n";
 	echo " Willkommen bei poolPi!\n";
@@ -33,20 +43,21 @@ while($running){
 	echo " shutdown - Fährt das System herunter\n";
 	echo " exit     - Beendet diese Anwendung\n";
 	
-	echo " off     - Beendet diese Anwendung\n";
-	echo " on     - Beendet diese Anwendung\n";
+	#echo " off     - Beendet diese Anwendung\n";
+	#echo " on     - Beendet diese Anwendung\n";
 	
 	echo "\n";
 	
-	if($line == "on"){
-		exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
-	}
+	if($line == "on")
+		turnOn();
 	
-	if($line == "off"){
-		exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
-	}
+	
+	if($line == "off")
+		turnOff();
+	
 	
 	if($line == "ip"){
+		$ips = explode(" ", exec("hostname --all-ip-addresses"));
 		echo " Die IP-Adresse des Systems lautet:\n";
 		foreach($ips AS $ip){
 			if(strpos($ip, ":") !== false)
@@ -67,6 +78,7 @@ while($running){
 	}
 	
 	if($line == "exit"){
+		stty($stty_settings);
 		echo " Beende...\n";
 		die();
 	}
@@ -84,10 +96,34 @@ while($running){
 	}
 	
 	echo "\n";
-	$line = readline(" Befehl: ");
+	echo " Befehl: $buffer";
+	$c = fgetc(STDIN);
+	#echo $c;
+	if(ord($c) == 10){
+		$line = $buffer;
+		$buffer = "";
+	}
+	
+	if(ord($c) == 127){
+		if($buffer != "")
+			$buffer = substr($buffer, 0, strlen($buffer) - 1);
+	}
+	
+	if(ord($c) == 32){
+		#if($buffer != "")
+		#	$buffer = substr($buffer, 0, strlen($buffer) - 1);
+	}
+	
+	if(ord($c) >= 97 AND ord($c) <= 122){
+		$buffer .= $c;
+	}
+	if($c === false)
+		break;
+	#$line = readline(" Befehl: ");
 	#echo $line;
 		
 	#sleep(1);
 }
+
 
 ?>
