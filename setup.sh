@@ -9,9 +9,6 @@ sudo pecl -d preferred_state=beta install dio
 sudo sed -i 2'i\extension=dio.so' '/etc/php5/cli/php.ini'
 
 sudo echo "\nwww-data        ALL=(ALL) NOPASSWD: /sbin/reboot" >> /etc/sudoers
-sudo sh -c "echo 508 > /sys/class/gpio/export"
-sudo sh -c "echo 'out' > /sys/class/gpio/gpio508/direction"
-sudo sh -c "echo '1' > /sys/class/gpio/gpio508/value"
 
 chmod 666 public_html/backend/system/DBData/Installation.pfdb.php
 

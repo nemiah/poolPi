@@ -1,6 +1,6 @@
 <?php
 
-exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
+#exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
 system('clear');
 
 function stty($options) {
@@ -14,9 +14,9 @@ function turnOn(){
 	exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
 }
 
-function turnOff(){
-	exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
-}
+#function turnOff(){
+#	exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
+#}
 
 
 $stty_settings = preg_replace("#.*; ?#s", "", stty("--all"));
@@ -52,8 +52,8 @@ while(1){
 		turnOn();
 	
 	
-	if($line == "off")
-		turnOff();
+#	if($line == "off")
+#		turnOff();
 	
 	
 	if($line == "ip"){
