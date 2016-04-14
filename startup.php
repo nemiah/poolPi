@@ -14,9 +14,9 @@ function turnOn(){
 	exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
 }
 
-#function turnOff(){
-#	exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
-#}
+function turnOff(){
+	exec("sudo sh -c \"echo '0' > /sys/class/gpio/gpio508/value\"");
+}
 
 
 $stty_settings = preg_replace("#.*; ?#s", "", stty("--all"));
@@ -48,13 +48,15 @@ while(1){
 	
 	echo "\n";
 	
-	if($line == "on")
+	if($line == "on"){
 		turnOn();
+		$line = "";
+	}
 	
-	
-#	if($line == "off")
-#		turnOff();
-	
+	if($line == "off"){
+		turnOff();
+		$line = "";
+	}
 	
 	if($line == "ip"){
 		$ips = explode(" ", exec("hostname --all-ip-addresses"));
@@ -65,34 +67,40 @@ while(1){
 			
 			echo " ".$ip."\n";
 		}
+		$line = "";
 	}
 	
 	if($line == "open"){
 		echo " Starte Fernwartung...\n";
 		exec("ssh -o StrictHostKeyChecking=no -R\*:2222:localhost:22 -R8888:localhost:80 -N nemiah@open3a.de > /dev/null 2>&1 &");
+		$line = "";
 	}
 	
 	if($line == "close"){
 		echo " Beende Fernwartung...\n";
 		exec("killall ssh");
+		$line = "";
 	}
 	
 	if($line == "exit"){
 		stty($stty_settings);
 		echo " Beende...\n";
-		die();
+		$line = "";
+		break;
 	}
 	
 	if($line == "reboot"){
 		echo " Neustart...\n";
 		shell_exec("sudo reboot");
-		exit;
+		$line = "";
+		break;
 	}
 	
 	if($line == "shutdown"){
 		echo " Fahre herunter...\n";
 		shell_exec("sudo shutdown -h now");
-		exit;
+		$line = "";
+		break;
 	}
 	
 	echo "\n";
