@@ -31,7 +31,7 @@ while($running){
 	echo "\n";
 	echo " reboot   - Startet das System neu\n";
 	echo " shutdown - Fährt das System herunter\n";
-	echo " exit     - Beendet diese Anwendung und zeigt die Konsole\n";
+	echo " exit     - Beendet diese Anwendung\n";
 	
 	echo "\n";
 	
