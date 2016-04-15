@@ -12,6 +12,16 @@ function stty($options) {
 
 function turnOn(){
 	exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
+	
+	$queue = shell_exec("atq");
+	if(trim($queue) != ""){
+		$ex = explode("\n", $queue);
+		foreach($ex AS $line){
+			$sex = explode("	", $line);
+			shell_exec("atrm ".trim($sex[0]));
+		}
+		
+	shell_exec("at now + 3min < /home/pi/poolPi/config/at_off.sh");
 }
 
 function turnOff(){
