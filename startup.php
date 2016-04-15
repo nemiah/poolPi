@@ -20,7 +20,8 @@ function turnOn(){
 			$sex = explode("	", $line);
 			shell_exec("atrm ".trim($sex[0]));
 		}
-		
+	}
+	
 	shell_exec("at now + 3min < /home/pi/poolPi/config/at_off.sh");
 }
 
