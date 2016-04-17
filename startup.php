@@ -1,6 +1,5 @@
 <?php
 
-#exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
 system('clear');
 
 function stty($options) {
