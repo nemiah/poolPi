@@ -8,10 +8,7 @@ function stty($options) {
   return implode(" ", $output);
 }
 
-
-function turnOn(){
-	exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
-	
+function clearAt(){
 	$queue = shell_exec("atq");
 	if(trim($queue) != ""){
 		$ex = explode("\n", $queue);
@@ -20,6 +17,13 @@ function turnOn(){
 			shell_exec("atrm ".trim($sex[0]));
 		}
 	}
+
+}
+
+function turnOn(){
+	exec("sudo sh -c \"echo '1' > /sys/class/gpio/gpio508/value\"");
+	
+	clearAt();
 	
 	shell_exec("at now + 3min < /home/pi/poolPi/config/at_off.sh");
 }
@@ -93,6 +97,7 @@ while(1){
 	}
 	
 	if($line == "exit"){
+		clearAt();
 		stty($stty_settings);
 		echo " Beende...\n";
 		$line = "";
