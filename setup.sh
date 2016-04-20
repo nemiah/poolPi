@@ -12,7 +12,8 @@ sudo echo "\nwww-data        ALL=(ALL) NOPASSWD: /sbin/reboot" >> /etc/sudoers
 
 chmod 666 public_html/backend/system/DBData/Installation.pfdb.php
 
-sudo cp config/listen.conf /etc/supervisor/conf.d/listen.conf
+#sudo cp config/listen.conf /etc/supervisor/conf.d/listen.conf
+sudo ln -s /home/pi/poolPi/config/listen.conf /etc/supervisor/conf.d/listen.conf
 sudo cp config/poolpi.conf /etc/apache2/sites-available/poolpi.conf
 
 sudo a2dissite 000-default
