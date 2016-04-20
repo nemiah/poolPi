@@ -27,6 +27,9 @@ $pi = new poolPi();
 
 $fd = dio_open('/dev/ttyUSB0', O_RDONLY | O_NOCTTY);# | O_NONBLOCK);
 
+if(!$fd)
+	exit(0);
+	
 dio_fcntl($fd, F_SETFL, O_SYNC);
 
 dio_tcsetattr($fd, array(
@@ -40,6 +43,9 @@ dio_tcsetattr($fd, array(
 $running = true;
 $buf = "";
 while ($running) {
+	if($fd === false)
+		exit(1);
+		
 	$data = dio_read($fd);
 	if(substr(bin2hex($data), 0, 4) == "0000"){
 		$add = "";
