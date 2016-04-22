@@ -28,7 +28,7 @@ function stty($options) {
 function clearAt(){
 	$queue = shell_exec("atq");
 	if(trim($queue) != ""){
-		$ex = explode("\n", $queue);
+		$ex = explode("\n", trim($queue));
 		foreach($ex AS $line){
 			$sex = explode("	", $line);
 			shell_exec("atrm ".trim($sex[0]));
