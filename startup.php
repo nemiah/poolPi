@@ -104,7 +104,7 @@ while(1){
 	
 	if($line == "sn"){
 		echo " Die Seriennummer lautet:\n";
-		echo serial()."\n";
+		echo " ".ltrim(serial(), "0")."\n";
 		$line = "";
 	}
 	
