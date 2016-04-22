@@ -2,6 +2,23 @@
 
 system('clear');
 
+function serial() {
+	$cpuinfo = file_get_contents("/proc/cpuinfo");
+
+	$ex = explode("\n", trim($cpuinfo));
+
+	$info = array();
+	foreach($ex AS $line){
+			$e = explode(":", $line);
+			if(count($e) < 2)
+					continue;
+
+			$info[trim($e[0])] = trim($e[1]);
+	}
+	
+	return $info["Serial"];
+}
+	
 function stty($options) {
   exec($cmd = "/bin/stty $options", $output, $el);
   $el AND die("exec($cmd) failed");
@@ -50,6 +67,7 @@ while(1){
 	echo " Es stehen folgende Befehle zur Verfügung:\n";
 	echo "\n";
 	echo " ip       - Zeigt die aktuelle IP-Adresse\n";
+	echo " sn       - Zeigt die Seriennummer\n";
 	echo " open     - Startet die Fernwartung\n";
 	echo " close    - Beendet die Fernwartung\n";
 	echo "\n";
@@ -81,6 +99,12 @@ while(1){
 			
 			echo " ".$ip."\n";
 		}
+		$line = "";
+	}
+	
+	if($line == "sn"){
+		echo " Die Seriennummer lautet:\n";
+		echo serial()."\n";
 		$line = "";
 	}
 	
