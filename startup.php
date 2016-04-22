@@ -32,7 +32,6 @@ function clearAt(){
 		foreach($ex AS $line){
 			$sex = explode("	", $line);
 			shell_exec("atrm ".trim($sex[0]));
-			echo "atrm ".trim($sex[0]);
 		}
 	}
 
