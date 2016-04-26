@@ -1,5 +1,7 @@
 <?php
-
+if(getenv("SSH_CLIENT"))
+	die();
+	
 system('clear');
 
 function serial() {
