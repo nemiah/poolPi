@@ -31,6 +31,29 @@ class SystemGUI extends System implements iGUIHTML2 {
 		
 		$message = "";
 		if($this->A("SystemType") == "ip"){
+			if($this->A("SystemSetting1") == ""){
+				$ips = explode(" ", exec("hostname --all-ip-addresses"));
+				
+				$this->changeA("SystemSetting1", $ips[0]);
+			}
+			if($this->A("SystemSetting3") == ""){
+				$gw = shell_exec("ip route | grep default | awk {'print $3'}");
+				$this->changeA("SystemSetting3", $gw);
+			}
+			if($this->A("SystemSetting4") == ""){
+				$dns = file("/etc/resolv.conf");
+				$fdns = "";
+				foreach($dns AS $line){
+					if(strpos($line, "nameserver") === 0){
+						$fdns = trim(str_replace("nameserver ", "", $line));
+						break;
+					}
+						
+							
+				}
+				$this->changeA("SystemSetting4", $fdns);
+			}
+			
 			$B = $gui->addSideButton("Aktuelle\nWerte", "computer");
 			$B->popup("", "Aktuelle Werte", "System", $this->getID(), "ipCurrentPopup", "", "", "{width:600}");
 			
