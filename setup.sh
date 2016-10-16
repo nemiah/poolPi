@@ -23,3 +23,4 @@ sudo service apache2 restart
 mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS poolpi DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;"
 
 sudo service supervisor restart
+echo "php /home/pi/poolPi/startup.php" >> /home/pi/.bashrc
