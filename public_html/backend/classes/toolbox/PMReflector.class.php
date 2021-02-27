@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class PMReflector {
 
@@ -23,6 +23,9 @@ class PMReflector {
 		
 		if(is_object($className)) return PMReflector::getAttributesArrayAnyObject($className);
 
+		if(trim($className) == "")
+			throw new Exception("Empty class name");
+		
 	    /*$a = array();
 	    $class = new ReflectionClass("$className");
 		$props = $class->getProperties();
@@ -38,7 +41,7 @@ class PMReflector {
 			return false;
 		
 		$r = new ReflectionClass($className);
-
+		
 		foreach($r->getInterfaces() as $in)
 			if(strtolower($in->getName()) == strtolower($interfaceName)) return true;
 		  

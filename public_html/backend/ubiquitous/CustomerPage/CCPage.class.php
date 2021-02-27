@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class CCPage {
 	protected $loggedIn = false;
@@ -71,10 +71,10 @@ class CCPage {
 
 		foreach ($dir as $fileinfo) {
 			if($fileinfo->isDot()) continue;
-			if(strpos($fileinfo->getFilename(), ".class.php") === false) continue;
+			if(strpos($fileinfo->getFilename(), ".class.php") === false) 
+				continue;
 
-
-			registerClassPath(str_replace(".class.php", "", $fileinfo->getFilename()), $absolutePath.$fileinfo->getFilename());
+			registerClassPath(str_replace(".class.php", "", $fileinfo->getFilename()), $fileinfo->getPathname());
 		}
 	}
 	
@@ -100,7 +100,7 @@ class CCPage {
 	function handleForm($valuesAssocArray){
 		switch($valuesAssocArray["action"]){
 			case "login":
-				if(!Users::login($valuesAssocArray["benutzer"], sha1($valuesAssocArray["password"]), "open3A", "default", true))
+				if(!Users::login($valuesAssocArray["benutzer"], $valuesAssocArray["password"], "open3A", "default", false, false))
 					Red::errorD("Benutzer/Passwort unbekannt");
 			break;
 		}
@@ -116,6 +116,10 @@ class CCPage {
 
 			$this->customizer = new $active();
 		} catch (Exception $e){ }
+	}
+	
+	public function getApps(){
+		return [];
 	}
 }
 ?>

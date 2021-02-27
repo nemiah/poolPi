@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class HTMLInput {
 	private $type;
@@ -29,7 +29,6 @@ class HTMLInput {
 	private $id = null;
 	private $onkeyup = "";
 	private $onkeydown = null;
-	private $hasFocusEvent = true;
 	private $isSelected = false;
 	protected $isDisabled = false;
 	private $isDisplayMode = false;
@@ -196,10 +195,6 @@ class HTMLInput {
 		$this->onenter = $function;
 	}
 
-	public function hasFocusEvent($bool){
-		$this->hasFocusEvent = $bool;
-	}
-
 	public function isSelected($bool){
 		$this->isSelected = $bool;
 	}
@@ -279,12 +274,12 @@ class HTMLInput {
 			break;
 		
 			case "HTMLEditor":
-
-				$B = new Button("in HTML-Editor\nbearbeiten","editor");
+				throw new Exception("HTMLEditor no longer supported!");
+				/*$B = new Button("in HTML-Editor\nbearbeiten","editor");
 				$B->windowRme("Wysiwyg","","getEditor","","WysiwygGUI;FieldClass:{$this->options[0]};FieldClassID:{$this->options[1]};FieldName:{$this->options[2]}");
 				$B->className("backgroundColor2");
 
-				return $B->__toString();
+				return $B->__toString();*/
 			break;
 		
 			case "TextEditor":
@@ -306,7 +301,6 @@ class HTMLInput {
 					$BO[] = "'{$this->options[2]}'";
 					
 				$B = new Button("in Editor\nbearbeiten","editor");
-				#$B->windowRme("Wysiwyg","","getEditor","","WysiwygGUI;FieldClass:{$this->options[0]};FieldClassID:{$this->options[1]};FieldName:{$this->options[2]}");
 				$B->doBefore("Overlay.showDark(); %AFTER");
 				$B->popup("", "Editor", "nicEdit", "-1", "editInPopup", $BO, "", "Popup.presets.large");
 				$B->className("backgroundColor2");
@@ -324,7 +318,6 @@ class HTMLInput {
 					$BO[] = "'{$this->options[3]}'";
 					
 				$B = new Button("in Editor\nbearbeiten","editor");
-				#$B->windowRme("Wysiwyg","","getEditor","","WysiwygGUI;FieldClass:{$this->options[0]};FieldClassID:{$this->options[1]};FieldName:{$this->options[2]}");
 				$B->doBefore("Overlay.showDark(); %AFTER");
 				$B->popup("", "Editor", "tinyMCE", "-1", "editInPopup", $BO, "", "Popup.presets.large");
 				$B->className("backgroundColor2");
@@ -365,11 +358,6 @@ class HTMLInput {
 					$this->onkeyup .= "if(event.keyCode == 13) saveMultiEditInput('".$this->multiEditOptions[0]."','".$this->multiEditOptions[1]."','".$this->name."'".($this->multiEditOptions[2] != null ? ", ".$this->multiEditOptions[2] : "").");";
 					$this->onblur .= "if(contentManager.oldValue != this.value) saveMultiEditInput('".$this->multiEditOptions[0]."','".$this->multiEditOptions[1]."','".$this->name."'".($this->multiEditOptions[2] != null ? ", ".$this->multiEditOptions[2] : "").");";
 				
-					if($this->hasFocusEvent) {
-						$this->onfocus .= "focusMe(this);";
-						$this->onblur .= "blurMe(this);";
-					}
-					$this->hasFocusEvent = false;
 				}
 
 				return "<textarea
@@ -384,7 +372,6 @@ class HTMLInput {
 					".($this->onfocus != null ? "onfocus=\"$this->onfocus\"" : "")."
 					".($this->onkeyup != null ? "onkeyup=\"$this->onkeyup\"" : "")."
 					".($this->isDisabled ? "disabled=\"disabled\"" : "")."
-					".($this->hasFocusEvent ? "onfocus=\"focusMe(this);\" onblur=\"blurMe(this);\"" : "")."
 					".($this->id != null ? "id=\"$this->id\"" : "").">$this->value</textarea>";
 			break;
 
@@ -404,6 +391,8 @@ class HTMLInput {
 					<script type=\"text/javascript\">
 						QQUploader$currentId = new qq.FileUploader({
 							maxSizePossible: '".ini_get("upload_max_filesize")."B',
+							uploadButtonText: '".T::_("Datei auswählen")."',
+							dragText: '".T::_("Datei hier ablegen zum Hochladen")."',
 							sizeLimit: ".Util::toBytes(ini_get("upload_max_filesize")).",
 							element: \$j('#$currentId')[0],
 							action: '".(($this->options != null AND isset($this->options["action"])) ? $this->options["action"] : "./interface/set.php")."',
@@ -455,22 +444,17 @@ class HTMLInput {
 			case "fileold":
 			case "color":
 				$JS = "";
-				if($this->type == "radio1")
-					$this->type = "radio";
+				#if($this->type == "radio1")
+				#	$this->type = "radio";
 				
 				if($this->type == "fileold")
 					$this->type = "file";
 				
 				if($this->isDisplayMode) {
-					if($this->type == "checkbox") return Util::catchParser($this->value);
+					if($this->type == "checkbox") return Util::catchParser($this->value, "load", "", $this->style);
 					if($this->type == "hidden") return "";
 					if($this->type == "password") return str_repeat("*", mb_strlen($this->value));
 					return $this->value."";
-				}
-
-				if($this->hasFocusEvent){
-					$this->onfocus .= "focusMe(this);";
-					$this->onblur .= "blurMe(this);";
 				}
 
 				if($this->multiEditOptions != null){
@@ -570,7 +554,7 @@ class HTMLInput {
 							 ".OnEvent::rme($this->autocomplete[0], "getACData", array("'$this->name'", "request.term", is_array($this->autocomplete[3]) ? "'".json_encode($this->autocomplete[3])."'" : $this->autocomplete[3]), "function(transport){ response(jQuery.parseJSON(transport.responseText)); }")."
 							 
 						},
-						select: function(event, ui) { var r = OnSelectCallback$this->id(ui.item, event); ".($this->autocomplete[2] ? "$('$this->id').style.display = 'none';" : "")." return r; },
+						select: function(event, ui) { if(typeof ui.item.script == 'string') { var F = new Function(ui.item.script); return F(); } var r = OnSelectCallback$this->id(ui.item, event); ".($this->autocomplete[2] ? "$('$this->id').style.display = 'none';" : "")." return r; },
 						change: function(event, ui) { var r = OnSelectCallback$this->id(ui.item, event); ".($this->autocomplete[2] ? "$('$this->id').style.display = 'none';" : "")." return r; }
 					}).data(\"ui-autocomplete\")._renderItem = function( ul, item ) {
 						return \$j( \"<li>\" )
@@ -579,6 +563,10 @@ class HTMLInput {
 							.appendTo( ul );
 					};");
 				}
+				
+				$useType = $this->type;
+				if($useType == "radio1")
+					$useType = "radio";
 				
 				return "$B2$cal<input
 					".($this->maxlength != null ? " maxlength=\"$this->maxlength\"" : "")."
@@ -599,7 +587,7 @@ class HTMLInput {
 					name=\"$this->name\"
 					$data
 					".($this->isDisabled ? "disabled=\"disabled\"" : "")."
-					type=\"".($this->type != "readonly" ? $this->type : "text" )."\"
+					type=\"".($useType != "readonly" ? $useType : "text" )."\"
 					".($this->onchange != null ? "onchange=\"$this->onchange\"" : "")."
 					".($this->id != null ? "id=\"$this->id\"" : "")."
 					$value />$this->requestFocus$JS";
@@ -640,10 +628,6 @@ class HTMLInput {
 		
 			case "select":
 			case "select-multiple":
-				if($this->hasFocusEvent){
-					$this->onfocus .= "focusMe(this);";
-					$this->onblur .= "blurMe(this);";
-				}
 				
 				if($this->type == "select-multiple")
 					$values = trim($this->value) != "" ? explode(";:;", $this->value) : array();
@@ -674,7 +658,7 @@ class HTMLInput {
 								$v->parentValue($this->value);
 							
 							$v->isSelected(false);
-							if($this->value == $k OR $v->getValue() == $this->value)
+							if($this->value == $k OR $this->value."" == $v->getValue()."")
 								$v->isSelected(true);
 							$html .= $v;
 						}

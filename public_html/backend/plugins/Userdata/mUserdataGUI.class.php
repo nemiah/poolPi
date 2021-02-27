@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 	function __construct() {
@@ -162,7 +162,8 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 		$BN->contextMenu("mUserdata", "1", "Einschränkung", "right", "up");
 		
 		$BS = new Button("Plugin-\nspezifisch", "lieferschein");
-		$BS->contextMenu("mUserdata", "4", "Plugin-spezifisch", "right", "up");
+		#$BS->contextMenu("mUserdata", "4", "Plugin-spezifisch", "right", "up");
+		$BS->popup("", "Plugin-spezifische Berechtigungen", "mUserdata", "-1", "pluginSpecificPopup", array("lastLoadedLeft"));
 		$BS->style("float:right;");
 		
 		$BP = new Button("Plugin\nausblenden", "tab");
@@ -181,6 +182,69 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 		$BP$BA<br><br>
 		$BR
 		<!--<button class=\"bigButton backgroundColor3\" title=\"".(isset($text["Plugin\nausblenden"]) ? $text["Plugin\nausblenden"] : "Plugin\nausblenden")."\" onclick=\"phynxContextMenu.start(this, 'mUserdata','5','".$text["Plugin"].":');\" style=\"background-image:url(./images/navi/tab.png);\" />-->";
+	}
+	
+	public function pluginSpecificPopup($UserID){
+		#echo $UserID;
+		$ps = array_flip($_SESSION["CurrentAppPlugins"]->getAllPlugins());
+		$bps = BPS::getAllProperties("mUserdata");
+		
+		$o = array(new HTMLInput("Bitte Plugin auswählen…", "option", "0"));
+		#$opts = "";
+		foreach($ps as $key => $value){
+			if($key == "mUserdata") continue;
+			if(!PMReflector::implementsInterface($key,"iPluginSpecificRestrictions"))
+				continue;
+			
+			$c = new $key();
+			if(!$c->getPluginSpecificRestrictions())
+				continue;
+			
+			if($value == "Kunde")
+				continue;
+			
+			if(!$_SESSION["CurrentAppPlugins"]->getIsAdminOnly($key) AND $_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($key) != "")
+				#$opts .= "<option value=\"$key:".$_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($key)."\">$value</option>";
+				$o[] = new HTMLInput($value, "option", $key);
+		}
+		
+		$I = new HTMLInput("relabelPlugin", "select", isset($bps["plugin"]) ? $bps["plugin"] : 0, $o);
+		$I->style("margin:10px;box-sizing:border-box;");
+		$I->onchange(OnEvent::rme($this, "setBPS", array("\$j('[name=relabelPlugin]').val()"), OnEvent::reloadPopup("mUserdata")));
+		
+		echo $I;
+		
+		if(!isset($bps["plugin"]) OR $bps["plugin"] == "0")
+			return;
+		
+		$pS = mUserdata::getPluginSpecificData($bps["plugin"], 0, $UserID);
+		
+		$T = new HTMLTable(2);
+		$T->useForSelection(false);
+		$T->maxHeight(400);
+		$T->setColWidth(1, 20);
+		
+		$c = new $bps["plugin"](-1);
+		$pSs = $c->getPluginSpecificRestrictions();
+		#$pSopts = "";
+		foreach($pSs as $key => $value){
+			$B = new Button("Hinzufügen", "arrow_left", "iconic");
+			$T->addRow (array(
+				$B,
+				$value
+			));
+			
+			if(isset($pS[$key]))
+				$T->addRowClass("confirm");
+			
+			$T->addRowEvent("click", "\$j(this).addClass('confirm'); ".OnEvent::rme($this, "setUserdata", array("'$key'", "'".$bps["plugin"]."'", "'pSpec'", "'$UserID'"), OnEvent::reload("Left")));
+		}
+		
+		echo $T;
+	}
+	
+	public function setBPS($value){
+		BPS::setProperty("mUserdata", "plugin", $value);
 	}
 	
 	public function rolesPopup($UserID){
@@ -313,8 +377,13 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 			if($identifier == "5" AND !in_array($key,$ms))
 				continue;
 			
-			if(!$_SESSION["CurrentAppPlugins"]->getIsAdminOnly($key) AND $_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($key) != "")
-				$opts .= "<option value=\"$key:".$_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($key)."\">$value</option>";
+			if($value == "Kunde")
+				continue;
+			
+			$flip = $_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($key);
+			
+			if(!$_SESSION["CurrentAppPlugins"]->getIsAdminOnly($key) AND $flip != "")# AND $flip != "Nix") //Needed for Übersicht-Plugin!
+				$opts .= "<option value=\"$key:".$flip."\">$value</option>";
 		}
 		$s = explode(":",$identifier);
 		if(isset($s[1])) $identifier = $s[0];
@@ -376,7 +445,7 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 				</table>";
 			break;
 			case "5":
-			case "4":
+			#case "4":
 				if($opts == "")
 					die("<p>".$text["noPsOptions"]."</p>");
 				
@@ -395,7 +464,7 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 					</tr>")."
 				</table>";
 			break;
-			
+			/*
 			case "pS":
 				$c = new $s[1]();
 				$pSs = $c->getPluginSpecificRestrictions();
@@ -412,7 +481,7 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 					</tr>
 				</table>";
 					
-			break;
+			break;*/
 			
 			case "hide":
 			case "relabel":
@@ -449,7 +518,7 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 				$G = new Users();
 				$G->addAssocV3("isAdmin","=","0");
 				
-				$G->setLimitV3("10");
+				#$G->setLimitV3("10");
 				$G->lCV3();
 				while(($t = $G->getNextEntry())){
 					$T->addRow(array(new Button("", "./images/i2/copy.png", "icon"), $t->A("username")));
@@ -466,10 +535,10 @@ class mUserdataGUI extends mUserdata implements iGUIHTML2, icontextMenu {
 				$T->maxHeight(200);
 				
 				$apps = Applications::getList();
-				foreach($apps AS $app){
+				foreach($apps AS $label => $app){
 					#rme("mUserdata","-1","setUserdata",new Array("hidePlugin"+$('relabelPlugin').value.split(":")[0],$('relabelPlugin').value.split(":")[0], "pHide", lastLoadedLeft),"contentManager.reloadFrameLeft()");
 					
-					$T->addRow(array(new Button("", "./plugins/Userdata/login18.png", "icon"), "Kann sich nicht an '$app' anmelden"));
+					$T->addRow(array(new Button("", "./plugins/Userdata/login18.png", "icon"), "Kann sich nicht an '$label' anmelden"));
 					$T->addRowEvent("click", OnEvent::rme(new mUserdata(-1), "setUserdata", array("'loginTo$app'", "'0'", "'loginTo'", "lastLoadedLeft"), OnEvent::closeContext().OnEvent::reload("Left")));
 					#$T->addRowEvent("click", "copyFromOtherUser('".$t->getID()."');");
 				}

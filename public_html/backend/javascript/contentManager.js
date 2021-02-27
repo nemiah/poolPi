@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 
 var lastLoadedLeft        = -1;
@@ -42,27 +42,33 @@ var contentManager = {
 	layout: "",
 	
 	maxHeight: function(){
+		var footerHeight = $j('#footer').outerHeight();
+		if(Interface.mobile())
+			footerHeight = 0;
+		
 		if(contentManager.layout == "desktop")
-			return $j('#wrapper').height() - $j('#wrapperTable').height() - 20; // 20 px padding on contentLeft and contentRight
+			return $j('#wrapper').height() + parseInt($j('#wrapper').css("padding-bottom")) - /*$j('#wrapperTable').height() -*/ 20; // 20 px padding on contentLeft and contentRight
 		
 		if(contentManager.layout == "vertical")
-			return $j(window).height() - $j('#footer').height() - 30; // 20 px padding on contentLeft and contentRight
+			return $j(window).height() - footerHeight - 20; // 20 px padding on contentLeft and contentRight
 		
-		return ($j(window).height() - $j('#navTabsWrapper').outerHeight() - $j('#footer').height() - 30);
+		if(contentManager.layout == "fixed")
+			return ($j(window).height() - ($j('#navTabsWrapper').outerHeight() > 60 ? $j('#navTabsWrapper').outerHeight() : 60) - footerHeight - 20);
+		
+		return ($j(window).height() - $j('#navTabsWrapper').outerHeight() - footerHeight - 10);
 	},
 			
 	maxWidth: function(getWindow){
-		if(!getWindow && $j('#desktopWrapper').length > 0)
+		if(!getWindow && contentManager.layout == "desktop")
 			return $j('#wrapper').width();
 		
-		
 		if(contentManager.layout == "vertical")
-			return ($j(window).width() -$j('#navigation').outerWidth() - 1 - $j('#phim:visible').outerWidth());
+			return ($j(window).width() - $j('#navigation').outerWidth() - 1);// - $j('#phim:visible').outerWidth());
 	
-		return ($j(window).width() - $j('#phim:visible').outerWidth());
+		return ($j(window).width());// - $j('#phim:visible').outerWidth());
 	},
 			
-	scrollTable: function(tableID){
+	scrollTable: function(tableID, maxPage){
 		var header_table = $j( '<table aria-hidden="true" id=\"head'+tableID+'\"><thead><tr><td></td></tr></thead></table>' );
 		
 		var scroll_div = '<div id=\"body'+tableID+'\" style="height: 120px;overflow-y: auto;"></div>';
@@ -78,7 +84,21 @@ var contentManager = {
 		});
 
 		$j('div#body'+tableID).prepend($targetDataTable);
-		$j('div#body'+tableID).css("width", $j($targetDataTable).width());
+		$j('div#body'+tableID).css("width", "100%");//$j($targetDataTable).width());
+		$j('div#body'+tableID).scroll(function(event){
+			if(lastLoadedRightPage >= maxPage)
+				return;
+			
+			//console.log(event);
+			var maxScroll = $j(this).children(":first").height() - $j(this).height();
+			//if(maxScroll < 0)
+			//	return;
+			
+			var percent = 100 / maxScroll * $j(this).scrollTop();
+			if(percent > 90)
+				contentManager.appendNextPage('contentRight', $j(this).children(":first").find('tbody').get(0));
+			//var scrollPercent = 100 *  / ($(containeD).height() - $(containeR).height());
+		});
 		//.width($j($targetDataTable).width());
 			
 		$j($targetDataTable).css('width', '100%');
@@ -86,15 +106,18 @@ var contentManager = {
 
 		$j($targetHeaderTable).find('thead').replaceWith( $j( $targetDataTable ).children('caption, thead').clone().show() );
 
-		var height = contentManager.maxHeight() - $j($targetHeaderTable).outerHeight() - $j("table#foot"+tableID+":visible").outerHeight();
-
+		var height = contentManager.maxHeight() - $j($targetHeaderTable).outerHeight();
+		if($j("table#foot"+tableID+":visible").length)
+			height -= $j("table#foot"+tableID+":visible").outerHeight();
+		
 		$j($targetHeaderTable).closest('.browserContainer').find('.browserContainerSubHeight').each(function(k, v){
 			height -= $j(v).outerHeight();
 		});
 
 		$j('div#body'+tableID).css('height', height);
 		
-		$j($targetHeaderTable).closest('.browserContainer').css("position", "fixed");
+		var container = $j($targetHeaderTable).closest('.browserContainer');
+		container.css("position", "fixed").css("width", container.parent().width());
 		
 		if($j('#contentRight').find("#"+tableID).length)
 			$j('#contentRight').append("<div style=\"height:"+contentManager.maxHeight()+"px\"></div>");
@@ -103,12 +126,11 @@ var contentManager = {
 			$j('#contentLeft').append("<div style=\"height:"+contentManager.maxHeight()+"px\"></div>");
 	},
 	
-	init: function(layout){
+	init: function(){
 		Interface.init();
 		Overlay.init();
-		contentManager.layout = layout;
 		
-		loadMenu();
+		Menu.loadMenu();
 		$('contentLeft').update();
 		//if (document.cookie == "") document.cookie = "CookieTest = Erfolgreich"
 		if (!navigator.cookieEnabled) alert("In Ihrem Browser sind Cookies deaktiviert.\nBitte aktivieren Sie Cookies, damit diese Anwendung funktioniert.");
@@ -184,15 +206,22 @@ var contentManager = {
 
 	autoLogoutInhibitor: null,
 
-	switchApplication: function(){
+	switchApplication: function(toApplication, propagate){
+		if(typeof propagate == "undefined")
+			propagate = true;
+		
 		Popup.closeNonPersistent();
 		Popup.closePersistent();
 		Menu.refresh();
 		contentManager.emptyFrame("contentScreen");
+		Interface.setup(function(){ });
 		contentManager.loadDesktop();
 		contentManager.loadJS();
-		contentManager.loadTitle();
+		//contentManager.loadTitle();
 		contentManager.clearHistory();
+		
+		if(propagate && Interface.BroadcastChannel !== null)
+			Interface.BroadcastChannel.postMessage("appSwitch");
 	},
 
 	clearHistory: function(){
@@ -215,28 +244,7 @@ var contentManager = {
 		contentManager.emptyFrame('contentLeft');
 		contentManager.emptyFrame('contentRight');
 		contentManager.loadFrame("contentScreen", "Desktop", 1, 0, "");
-		/*
-		new Ajax.Request('./interface/loadFrame.php?p=Desktop&id=1', {
-		method: 'get',
-		onSuccess: function(transport) {
-			if(transport.responseText.search(/^error:/) == -1){
-				lastLoadedRightPlugin = "Desktop";
-				lastLoadedRight = 1;
-				$('contentRight').update(transport.responseText);
-
-				if($('DesktopMenuEntry')) setHighLight($('DesktopMenuEntry'));
-
-				if(!$('morePluginsMenuEntry')) {
-					new Ajax.Request('./interface/loadFrame.php?p=Desktop&id=2', {
-						onSuccess: function(transport){
-							$('contentLeft').update(transport.responseText);
-						}
-					});
-					lastLoadedLeftPlugin = "Desktop";
-					lastLoadedLeft = 2;
-				}
-			}
-		}});*/
+		$j('.theOne').removeClass('theOne');
 	},
 	
 	loadPlugin: function(targetFrame, targetPlugin, bps, withId, options){
@@ -252,9 +260,11 @@ var contentManager = {
 			
 			if(targetFrame == "contentRight"){
 				var historyPlugin = targetPlugin;
+				var oldName = historyPlugin;
+				
 				if(historyPlugin == "Auftraege")
 					historyPlugin = "mAuftrag";
-
+				
 				if(historyPlugin == "Adressen")
 					historyPlugin = "mAdresse";
 
@@ -268,16 +278,17 @@ var contentManager = {
 					historyPlugin = "mObjektL";
 
 				if(contentManager.historyLeft[historyPlugin] && contentManager.historyLeft[historyPlugin][1] != -1){
-					var found = false;
-					if($j('#Browser'+historyPlugin+contentManager.historyLeft[historyPlugin][1]).length)
-						found = true;
+					//console.log("HERE!");
+					//var found = false;
+					//if($j('#Browser'+oldName+contentManager.historyLeft[historyPlugin][1]).length)
+					//	found = true;
 
-					if($j('#BrowserMain'+contentManager.historyLeft[historyPlugin][1]).length)
-						found = true;
-
-					if(found)
+					//if($j('#BrowserMain'+contentManager.historyLeft[historyPlugin][1]).length)
+					//	found = true;
+					//console.log(found);
+					if(!Interface.mobile())
 						contentManager.loadFrame("contentLeft", contentManager.historyLeft[historyPlugin][0], contentManager.historyLeft[historyPlugin][1], 0, "", function(){
-							$j('#Browser'+historyPlugin+contentManager.historyLeft[historyPlugin][1]).addClass("lastSelected");
+							$j('#Browser'+oldName+contentManager.historyLeft[historyPlugin][1]).addClass("lastSelected");
 							$j('#BrowserMain'+contentManager.historyLeft[historyPlugin][1]).addClass("lastSelected");
 						});
 
@@ -305,7 +316,7 @@ var contentManager = {
 		Popup.closeNonPersistent();
 		
 		if($(targetPlugin+'MenuEntry'))
-			setHighLight($(targetPlugin+'MenuEntry'));
+			Menu.setHighLight($(targetPlugin+'MenuEntry'));
 	},
 
 	loadJS: function(){
@@ -332,17 +343,18 @@ var contentManager = {
     	});
 	},
 
-	loadTitle: function(){
+	/*loadTitle: function(){
 		if(!contentManager.updateTitle)
 			return;
 		
 		contentManager.rmePCR("Menu", "-1", "getActiveApplicationName", "",  function(transport){
-			if(!Interface.isDesktop) document.title = transport.responseText;
-			else $("wrapperHandler").update(transport.responseText);
+			if(contentManager.layout != "desktop") 
+				document.title = transport.responseText;
+			else 
+				$("wrapperHandler").update(transport.responseText);
     	});
 		
-    	//new Ajax.Request("./interface/rme.php?class=Menu&method=getActiveApplicationName&constructor=&parameters=",{onSuccess: });
-	},
+	},*/
 
 	setRoot: function(path){
 		contentManager.rootPath = path;
@@ -477,6 +489,8 @@ var contentManager = {
 
 		if(typeof contentManager.backupFrames[backupName] == "undefined" || contentManager.backupFrames[backupName] == null) {
 			alert("Backup unknown");
+			console.log(backupName);
+			console.log(contentManager.backupFrames);
 			return;
 		}
 		if(contentManager.backupFrames[backupName][0] != -1 || (targetFrame == 'contentRight' && contentManager.backupFrames[backupName][1] != "") || force){
@@ -518,6 +532,18 @@ var contentManager = {
 		}
 		
 		$(targetFrame).update("");
+	},
+
+	appendNextPageLoading: false,
+	appendNextPage: function(targetFrame, appendTo){
+		if(contentManager.appendNextPageLoading)
+			return;
+		
+		if(targetFrame == "contentRight"){
+			contentManager.appendNextPageLoading = true;
+			contentManager.loadFrame(targetFrame, lastLoadedRightPlugin, lastLoadedRight, (lastLoadedRightPage * 1) + 1, "", function(){ contentManager.appendNextPageLoading = false; }, false, {'appendTo': appendTo});
+		//target, plugin, withId, page, bps, onSuccessFunction, hideError, options
+		}
 	},
 
 	forwardOnePage: function(targetFrame){
@@ -563,7 +589,9 @@ var contentManager = {
 	},
 
 	saveSelection: function(classe, classId, saveFunction, idToSave, targetFrame, bps){
-		contentManager.rmePCR(classe, classId, saveFunction, idToSave, function() {contentManager.reloadFrame(targetFrame);}, bps)
+		contentManager.rmePCR(classe, classId, saveFunction, idToSave, function() {
+			contentManager.reloadFrame(targetFrame);
+		}, bps)
 	},
 
 	editInPopup: function(plugin, withId, title, bps, options){
@@ -626,6 +654,10 @@ var contentManager = {
 		if(typeof bps != "undefined")
 			bps = bps.replace(/;/, "&bpsPar[]=");
 		
+		var appendable = false;
+		if(typeof options == "object" && options.appendTo)
+			appendable = true;
+		
 		new Ajax.Request('./interface/loadFrame.php?r='+Math.random(), {
 			onSuccess: function(transport, textStatus, request){
 				if(checkResponse(transport, hideError)) {
@@ -634,10 +666,23 @@ var contentManager = {
 						if(typeof options.doBefore == "function")
 							options.doBefore();
 					}
-
-					$j("#"+target).html(transport.responseText);
-
-					if(typeof onSuccessFunction != "undefined" && onSuccessFunction != "") onSuccessFunction(transport);
+					
+					var close = "";
+					if(target == "contentLeft" && Interface.mobile()){
+						close = "<div style=\"height:50px;\"></div><span title=\"Schließen\" style=\"z-index:110;position:absolute;padding:15px;top:5px;right:5px;\" onclick=\"contentManager.emptyFrame('contentLeft'); contentManager.clearHistory(); $j('#contentLeft').css('min-height', '');\" class=\"iconic iconicG iconicL x\" alt=\"Schließen\"></span>";
+					}
+					
+					if(typeof options == "object" && options.appendTo)
+						$j(options.appendTo).append(transport.responseText);
+					else
+						$j("#"+target).html(close+transport.responseText);
+					
+					if(target == "contentLeft" && Interface.mobile() && $j(document).height() > $j("#contentLeft").outerHeight()){
+						$j("#contentLeft").css("min-height", $j(document).height());
+					}
+					
+					if(typeof onSuccessFunction != "undefined" && onSuccessFunction != "")
+						onSuccessFunction(transport);
 
 					Aspect.joinPoint("loaded", "contentManager.loadFrame", arg, transport.responseText);
 
@@ -645,7 +690,7 @@ var contentManager = {
 			},
 				
 			method: "POST",
-			parameters: 'p='+plugin+(typeof withId != "undefined" ? '&id='+withId : "")+((typeof bps != "undefined" && bps != "") ? '&bps='+bps : "")+((typeof page != "undefined" && page != "") ? '&page='+page : "")+"&frame="+target});
+			parameters: 'p='+plugin+(typeof withId != "undefined" ? '&id='+withId : "")+((typeof bps != "undefined" && bps != "") ? '&bps='+bps : "")+((typeof page != "undefined" && page != "") ? '&page='+page : "")+"&frame="+target+"&appendable="+(appendable ? "1" : "0")});
 
 	},
 
@@ -672,6 +717,9 @@ var contentManager = {
 				if(transport.responseText.charAt(0) == "{" && transport.responseText.charAt(transport.responseText.length - 1) == "}")
 					transport.responseData = jQuery.parseJSON(transport.responseText);
 				
+				if(transport.responseText.charAt(0) == "[" && transport.responseText.charAt(transport.responseText.length - 1) == "]")
+					transport.responseData = jQuery.parseJSON(transport.responseText);
+				
 				if(typeof onSuccessFunction == "string")
 					eval(onSuccessFunction);
 
@@ -682,7 +730,8 @@ var contentManager = {
 			}
 			if(!check && typeof onFailureFunction == "function")
 				onFailureFunction();
-		}});
+		},
+		onError: onFailureFunction});
 	},
 
 	iframeRme: function(targetClass, targetClassId, targetMethod, targetMethodParameters, targetFrame, bps){
@@ -694,18 +743,34 @@ var contentManager = {
 		}
 		else targetMethodParameters = "'"+targetMethodParameters+"'";
 
-			$j('#'+targetFrame).attr("src", contentManager.getRoot()+'interface/rme.php?class='+targetClass+'&constructor='+targetClassId+'&method='+targetMethod+'&parameters='+targetMethodParameters+((bps != "" && typeof bps != "undefined") ? "&bps="+bps : "")+"&r="+Math.random()+(Ajax.physion != "default" ? "&physion="+Ajax.physion : ""));
+			$j('#'+targetFrame).attr("src", contentManager.getRoot()+'interface/rme.php?class='+targetClass+'&constructor='+encodeURIComponent(targetClassId)+'&method='+targetMethod+'&parameters='+targetMethodParameters+((bps != "" && typeof bps != "undefined") ? "&bps="+bps : "")+"&r="+Math.random()+(Ajax.physion != "default" ? "&physion="+Ajax.physion : ""));
 
 	},
 
-	startAutoLogoutInhibitor: function(){
-		if(contentManager.autoLogoutInhibitor) return;
+	startAutoLogoutInhibitor: function(hasZentrale){
+		if(contentManager.autoLogoutInhibitor) 
+			return;
 
 		contentManager.autoLogoutInhibitor = true;
 
-		new PeriodicalExecuter(function(pe) {
+		window.setInterval(function(){
 			contentManager.rmePCR('Menu','','autoLogoutInhibitor','');
-		}, 300);
+			
+			if(hasZentrale)
+				$j.ajax({
+					url: contentManager.getRoot()+"plugins/AppServer/index.php?action=keepAlive",
+
+					beforeSend: function(){
+					},
+
+					success: function(transport, textStatus, request){
+
+					},
+					type: "GET",
+					data: null,
+					cache : false
+				});
+		}, 300 * 1000);
 	},
 
 	newClassButton: function(newClass, onSuccessFunction, targetFrame, bps){
@@ -713,19 +778,6 @@ var contentManager = {
 		if(typeof targetFrame == "undefined") targetFrame = "contentLeft";
 
 		contentManager.loadFrame(targetFrame, newClass, -1, 0, bps, onSuccessFunction);
-/*
-		new Ajax.Request('./interface/loadFrame.php?p='+newClass+'&id=-1'+(typeof bps != "undefined" ? "&bps="+bps : ""), {
-		method: 'get',
-		onSuccess: function(transport) {
-			if(checkResponse(transport)) {
-				if(typeof targetFrame == "undefined") targetFrame = "contentLeft";
-				$(targetFrame).update(transport.responseText);
-				//lastLoadedLeft = -1;
-				//lastLoadedLeftPlugin = newClass;
-
-				if(typeof onsuccessFunction != "undefined" && onsuccessFunction != "") onsuccessFunction();
-			}
-		}});*/
 	},
 
 	/*toggleFormFields: function(mode, fields, formID){
@@ -765,7 +817,11 @@ var contentManager = {
 
 		if(mode == "hide")
 			for (var f = 0; f < fields.length; f++) {
-				var fieldS = $j(formID+'select[name='+fields[f]+'],'+formID+'input[name='+fields[f]+'],'+formID+'textarea[name='+fields[f]+'],'+formID+'span[name='+fields[f]+']').parent().parent();
+				var fieldS = $j(formID+'select[name='+fields[f]+'],'+formID+'input[name='+fields[f]+'],'+formID+'textarea[name='+fields[f]+'],'+formID+'span[name='+fields[f]+']');
+				if(fieldS.prop("type") == "hidden")
+					continue;
+				
+				fieldS = fieldS.parent().parent();
 				fieldS.css("display", "none");
 				if(fieldS.prev().hasClass("FormSeparatorWithLabel") || fieldS.prev().hasClass("FormSeparatorWithoutLabel"))
 					fieldS.prev().css("display", "none");
@@ -773,7 +829,11 @@ var contentManager = {
 
 		if(mode == "show")
 			for (var f = 0; f < fields.length; f++) {
-				var fieldS = $j(formID+'select[name='+fields[f]+'],'+formID+'input[name='+fields[f]+'],'+formID+'textarea[name='+fields[f]+'],'+formID+'span[name='+fields[f]+']').parent().parent();
+				var fieldS = $j(formID+'select[name='+fields[f]+'],'+formID+'input[name='+fields[f]+'],'+formID+'textarea[name='+fields[f]+'],'+formID+'span[name='+fields[f]+']');
+				if(fieldS.prop("type") == "hidden")
+					continue;
+				
+				fieldS = fieldS.parent().parent();
 				fieldS.css("display", "");
 				
 				if(fieldS.prev().hasClass("FormSeparatorWithLabel") || fieldS.prev().hasClass("FormSeparatorWithoutLabel"))
@@ -816,7 +876,6 @@ var contentManager = {
 		
 		if(event.keyCode == 9)
 			return;
-		
 		
 		
 		if($j('#'+timeInputID).val().length == 2 && $j('#'+timeInputID).val().lastIndexOf(':') == -1){

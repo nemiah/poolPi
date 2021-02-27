@@ -89,6 +89,10 @@ if(isset($I)){
 		foreach($scriptFilesData AS $v)
 			$scriptFiles .= "<script type=\"text/javascript\" src=\"$v\"></script>";
 	}
+	
+	$viewport = "width=device-width, initial-scale=1, user-scalable=no";
+	if(method_exists($I, "getViewport"))
+		$viewport = $I->getViewport();
 }
 
 ?>
@@ -96,14 +100,19 @@ if(isset($I)){
 <html lang="de">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+		<meta name="viewport" content="<?php echo $viewport; ?>" />
 		<?php
 		echo $meta;
 		?>
 		<title><?php echo $pageTitle; ?></title>
-		
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="mobile-web-app-capable" content="yes" />
+
 		<link rel="stylesheet" type="text/css" href="./lib/jquery-ui-1.8.24.custom.css" />
-		<link rel="stylesheet" type="text/css" href="./lib/default.css" />
+		<link rel="stylesheet" href="./lib/trumbowyg/ui/trumbowyg.min.css">
+		<!--<link rel="stylesheet" type="text/css" href="./lib/default.css" />-->
+		<link rel="stylesheet" type="text/css" href="./lib/default.css?r=<?php echo rand(); ?>" />
 		<style type="text/css">
 			<?php
 			echo $styles;
@@ -118,6 +127,8 @@ if(isset($I)){
 		<script type="text/javascript" src="./lib/noty/topLeft.js"></script>
 		<script type="text/javascript" src="./lib/noty/default.js"></script>
 		<script type="text/javascript" src="./lib/jquery.hammer.min.js"></script>
+		<script type="text/javascript" src="./lib/trumbowyg/trumbowyg.min.js"></script>
+		<script type="text/javascript" src="./lib/trumbowyg/langs/de.min.js"></script>
 		
 		<script type="text/javascript">
 		$.noty.defaults = {

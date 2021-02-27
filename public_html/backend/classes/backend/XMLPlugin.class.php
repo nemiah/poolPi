@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class XMLPlugin extends PluginV2 {
 	private $file;
@@ -31,6 +31,8 @@ class XMLPlugin extends PluginV2 {
 	private $menuEntryTarget;
 	private $blockNonAdmin = true;
 	private $doSomethingElse;
+	private $applications = array();
+	private $registry = array();
 	
 	private $collectionGUI = array();
 	
@@ -39,6 +41,21 @@ class XMLPlugin extends PluginV2 {
 	function __construct($file, $allowedPlugins = null){
 		$this->file = $file;
 		$this->parse($allowedPlugins);
+		
+		$this->customize();
+	}
+	
+	public function customize(){
+		if(defined("PHYNX_FORBID_CUSTOMIZERS"))
+			return;
+		
+		try {
+			$active = mUserdata::getGlobalSettingValue("activeCustomizer");
+			if($active == null) return;
+
+			$this->customizer = new $active();
+			$this->customizer->customizeClass($this);
+		} catch (Exception $e){ }
 	}
 	
 	private function parse($allowedPlugins){
@@ -47,7 +64,16 @@ class XMLPlugin extends PluginV2 {
 		$p = xml_parser_create();
 		xml_parser_set_option($p, XML_OPTION_CASE_FOLDING, 0);
 		xml_parse_into_struct($p, $content, $vals, $index);
-		if(xml_get_error_code($p)) echo xml_error_string(xml_get_error_code($p))." at line ".xml_get_current_line_number($p);
+		
+		$xml = null;
+		try {
+			$xml = new SimpleXMLElement($content);
+		} catch (Exception $e){
+			
+		}
+		#if(xml_get_error_code($p)) 
+		#	echo xml_error_string(xml_get_error_code($p))." at line ".xml_get_current_line_number($p);
+		
 		xml_parser_free($p);
 		
 		if(isset($index["genericCollection"]) AND isset($vals[$index["genericCollection"][0]])) $this->genericCollection = $vals[$index["genericCollection"][0]]["value"] == "true";
@@ -64,8 +90,12 @@ class XMLPlugin extends PluginV2 {
 
 		if(isset($vals[$index["icon"][0]]) AND isset($vals[$index["icon"][0]]["value"])) $this->icon = $vals[$index["icon"][0]]["value"];
 		
-		if(isset($index["menuName"]) AND isset($vals[$index["menuName"][0]]) AND isset($vals[$index["menuName"][0]]["value"]))
+		if(isset($index["menuName"]) AND isset($vals[$index["menuName"][0]]) AND isset($vals[$index["menuName"][0]]["value"])){
 			$this->menuName = $vals[$index["menuName"][0]]["value"];
+			
+			if($xml AND isset($xml->plugin->menuName["ifNotLoaded"]) AND isset($xml->plugin->menuName["ifNotLoaded"][0]) AND Applications::isAppLoaded($xml->plugin->menuName["ifNotLoaded"][0].""))
+					$this->menuName = "";
+		}
 		
 		if(isset($index["javascript"]) AND isset($vals[$index["javascript"][0]])) {
 			$JS = array();
@@ -82,31 +112,36 @@ class XMLPlugin extends PluginV2 {
 			$this->adminOnly = $vals[$index["adminOnly"][0]]["value"];
 		else
 			$this->adminOnly = "false";
-		if(isset($index["collection"]) AND isset($vals[$index["collection"][0]])) $this->collection = $vals[$index["collection"][0]]["value"];
 		
-		if(isset($index["doSomethingElse"]) AND isset($vals[$index["doSomethingElse"][0]])) $this->doSomethingElse = $vals[$index["doSomethingElse"][0]]["value"];
-		if(isset($index["menuEntryTarget"]) AND isset($vals[$index["menuEntryTarget"][0]])) $this->menuEntryTarget = $vals[$index["menuEntryTarget"][0]]["value"];
+		if(isset($index["collection"]) AND isset($vals[$index["collection"][0]])) 
+			$this->collection = $vals[$index["collection"][0]]["value"];
+		
+		if(isset($index["doSomethingElse"]) AND isset($vals[$index["doSomethingElse"][0]])) 
+			$this->doSomethingElse = $vals[$index["doSomethingElse"][0]]["value"];
+		
+		if(isset($index["menuEntryTarget"]) AND isset($vals[$index["menuEntryTarget"][0]])) 
+			$this->menuEntryTarget = $vals[$index["menuEntryTarget"][0]]["value"];
 
 		if(isset($index["version"]) AND isset($vals[$index["version"][0]]) AND isset($vals[$index["version"][0]]["value"]))
 			$this->version = $vals[$index["version"][0]]["value"];
 
 		
-		if(count($allowedPlugins) > 0 AND !in_array($this->registerClassName(), $allowedPlugins))
+		if($allowedPlugins AND count($allowedPlugins) > 0 AND !in_array($this->registerClassName(), $allowedPlugins))
 			return;
 		
-		if(isset($index["registry"]) AND isset($vals[$index["registry"][0]]))
-			foreach($index["registry"] AS $k => $v){
-				$call = explode(";", $vals[$index["registry"][$k]]["value"]);
-				#print_r($call);
+		if(isset($index["application"]) AND isset($vals[$index["application"][0]])){
+			foreach($xml->plugin->application AS $sub){
+				$menu = $this->menuName;
+				if(isset($sub["menuName"]))
+					$menu = trim($sub["menuName"][0]."") == "" ? null : $sub["menuName"][0]."";
 				
-				if(count($call) == 3)
-					Registry::setCallback($call[0], $call[1], $call[2]);
-
-				if(count($call) == 2)
-					Registry::setCallback($call[0], $call[1]);
-					#echo "callbacks:";
-				#print_r(Registry::getCallbacks($call[0], $call[2]));
+				$this->applications[] = array($sub."", $sub["version"][0]."", $menu);
 			}
+		}
+		
+		if(isset($index["registry"]) AND isset($vals[$index["registry"][0]]))
+			foreach($index["registry"] AS $k => $v)
+				$this->registry[] = explode(";", $vals[$index["registry"][$k]]["value"]);
 
 		
 		if(isset($index["collectionGUI"]))
@@ -138,6 +173,10 @@ class XMLPlugin extends PluginV2 {
 			}
 				
 		}
+	}
+	
+	function registerApplications(){
+		return $this->applications;
 	}
 	
 	function registerName() {
@@ -181,9 +220,21 @@ class XMLPlugin extends PluginV2 {
 	}
 	*/
 	function registerMenuEntry(){
+		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
+		try {
+			$MArgs = array($this->collection);
+			return Aspect::joinPoint("around", $this, __METHOD__, $MArgs);
+		} catch (AOPNoAdviceException $e) {}
+		Aspect::joinPoint("before", $this, __METHOD__, $MArgs);
+		// </editor-fold>
+		
 		if($this->menuName != null) return $this->menuName;
 		else return "";
 		#else return parent::registerMenuEntry();
+	}
+	
+	function registerRegistry(){
+		return $this->registry;
 	}
 	
 	function registerMenuEntryTarget(){
@@ -196,7 +247,17 @@ class XMLPlugin extends PluginV2 {
 	}
 	
 	function registerPluginIsAdminOnly(){
-		if($this->adminOnly != null) return $this->adminOnly == "true";
+		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
+		try {
+			$MArgs = array($this->collection);
+			return Aspect::joinPoint("around", $this, __METHOD__, $MArgs);
+		} catch (AOPNoAdviceException $e) {}
+		Aspect::joinPoint("before", $this, __METHOD__, $MArgs);
+		// </editor-fold>
+		
+		if($this->adminOnly != null)
+			return $this->adminOnly == "true";
+		
 		else return parent::registerPluginIsAdminOnly();
 	}
 	

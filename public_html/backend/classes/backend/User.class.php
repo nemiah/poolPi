@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class User extends PersistentObject {
 	
@@ -72,7 +72,7 @@ class User extends PersistentObject {
 			$this->A->SHApassword = "";
 	}
 	
-	function saveMe($checkUserData = true, $output = false){
+	function saveMe($checkUserData = true, $output = false, $hash = true){
 		$allowedUsers = Environment::getS("allowedUsers", null);
 		if($allowedUsers !== null AND $this->A("isAdmin") == "0"){
 			$AC = anyC::get("User", "isAdmin", "0");
@@ -86,18 +86,22 @@ class User extends PersistentObject {
 		
 		$U = new User($this->ID);
 		$U->loadMe(false);
-		if(mUserdata::getGlobalSettingValue("encryptionKey") == null AND Session::isUserAdminS()) mUserdata::setUserdataS("encryptionKey", Util::getEncryptionKey(), "eK", -1);
+		
+		if(mUserdata::getGlobalSettingValue("encryptionKey") == null AND Session::isUserAdminS()) 
+			mUserdata::setUserdataS("encryptionKey", Util::getEncryptionKey(), "eK", -1);
+		
 		if($this->A->SHApassword != "")
-			$this->A->SHApassword = sha1($this->A->SHApassword);
+			$this->A->SHApassword = $hash ? sha1(str_replace("\\$", "$",$this->A->SHApassword)) : $this->A->SHApassword;
 		else
 			$this->A->SHApassword = $U->A("SHApassword");
 
-		if($checkUserData) mUserdata::checkRestrictionOrDie("cantEdit".str_replace("GUI","",get_class($this)));
+		if($checkUserData) 
+			mUserdata::checkRestrictionOrDie("cantEdit".str_replace("GUI","",get_class($this)));
 
 		$this->loadAdapter();
 		$this->Adapter->saveSingle2($this->getClearClass(get_class($this)),$this->A);
 		if($output)
-			Red::messageSaved();
+			Red::messageSaved(array("ID" => $this->ID));
 	}
 	
 	function newMe($checkUserData = true, $output = false){
@@ -116,12 +120,31 @@ class User extends PersistentObject {
 		
 		if(mUserdata::getGlobalSettingValue("encryptionKey") == null AND Session::isUserAdminS()) mUserdata::setUserdataS("encryptionKey", Util::getEncryptionKey(), "eK", -1);
 		$this->A->SHApassword = sha1($this->A->SHApassword);
-		return parent::newMe($checkUserData, $output);
+		
+		$id = parent::newMe($checkUserData, false);
+		
+		if(Applications::activeApplication() == "supportBox"){
+			$F = new Factory("Userdata");
+			$F->sA("UserID", $id);
+			$F->sA("name", "hidePluginUsers");
+			$F->sA("wert", "Users");
+			$F->sA("typ", "pHide");
+			
+			$F->store();
+		}
+			
+        if($output OR $this->echoIDOnNew){
+	        if($this->echoIDOnNew) {
+				echo $this->ID;
+			} else
+				Red::messageCreated(array("ID" => $this->ID));
+		}
 	}
 	
 	public function convertPassword(){
 		$this->loadMe();
-		if($this->A->password == ";;;-1;;;") return;
+		if($this->A->password == ";;;-1;;;") 
+			return;
 		
 		$this->A->SHApassword = $this->A->password;
 		$this->A->password = ";;;-1;;;";
@@ -136,7 +159,7 @@ class User extends PersistentObject {
 		$A->name = "";
 		$A->username = "";
 		$A->password = "";
-		$A->isAdmin = "";
+		$A->isAdmin = "0";
 		$A->SHApassword = "";
 		$A->language = "";
 		$A->UserEmail = "";

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class mInstallation extends anyC {
 	private $folder = "./system/DBData/";
@@ -32,13 +32,39 @@ class mInstallation extends anyC {
 	}
 
 	public function setupAllTables($echo = 0){
+		$return = array();
+		if(file_exists(Util::getRootPath()."system/CI.pfdb.php")){
+			$return["all"] = "Using fast setup mode...";
+			
+			$DBG = new DBStorage();
+			$C = $DBG->getConnection();
+			
+			$DB = new PhpFileDB();
+			$DB->setFolder(Util::getRootPath()."system/");
+			$Q = $DB->pfdbQuery("SELECT * FROM CI");
+			while($R = $DB->pfdbFetchAssoc($Q)){
+				if(!trim($R["MySQL"]))
+					continue;
+				
+				$CIA = new stdClass();
+				$CIA->MySQL = $R["MySQL"];
+				
+				$DBG->createTable($CIA);
+				
+				$return[] = $R["MySQL"];
+			}
+			
+			mUserdata::setUserdataS("DBVersion", Phynx::build(), "", -1);
+			return $return;
+		}
+		
+		$currentApp = Applications::activeApplication();
 		$apps = Applications::getList();
 		$apps["plugins"] = "plugins";
 		#$apps["plugins"] = "ubiquitous";
 
 		$currentPlugins = $_SESSION["CurrentAppPlugins"];
 		
-		$return = array();
 		foreach($apps AS $app){
 			$AP = $_SESSION["CurrentAppPlugins"] = new AppPlugins($app);
 			$AP->scanPlugins("plugins");
@@ -78,9 +104,11 @@ class mInstallation extends anyC {
 		
 		mUserdata::setUserdataS("DBVersion", Phynx::build(), "", -1);
 		$_SESSION["CurrentAppPlugins"] = $currentPlugins;
-		
+		Applications::i()->setActiveApplication($currentApp);
 		return $return;
 	}
+	
+	protected $updateExeptions = [];
 	
 	public function updateAllTables(){
 		$apps = Applications::getList();
@@ -88,6 +116,7 @@ class mInstallation extends anyC {
 		#$apps["plugins"] = "ubiquitous";
 
 		$currentPlugins = $_SESSION["CurrentAppPlugins"];
+		$done = array();
 		
 		$return = array();
 		foreach($apps AS $app){
@@ -95,7 +124,11 @@ class mInstallation extends anyC {
 			$AP->scanPlugins("plugins");
 			$p = array_flip($AP->getAllPlugins());
 			#Applications::i()->setActiveApplication($app); //or the autoloader won't work; yes, it does because of addClassPath later on
-		
+
+			foreach($done AS $plugin)
+				if(isset($p[$plugin]))
+					unset($p[$plugin]);
+			
 			foreach($p as $key => $value){
 				if($key == "CIs") continue;
 				if($key == "mInstallation") continue;
@@ -117,7 +150,7 @@ class mInstallation extends anyC {
 				}
 				try {
 					if(!$c->checkIfMyDBFileExists())
-						$return[$value] = "Keine DB-Datei!";
+						$return[$value] = "<span style=\"color:grey;\">Nichts zu tun, keine DB-Datei!</span>";
 					else {
 						if($c->checkIfMyTableExists())
 							$return[$value] = $c->checkMyTables(true);
@@ -125,11 +158,19 @@ class mInstallation extends anyC {
 						#if(!$c->checkIfMyTableExists())
 							$return[$value] = $c->createMyTable(true);
 					}
+					$done[] = $key;
+				} catch (RowSizeTooLargeException $e){
+					$this->updateExeptions[] = $e;
+					$return[$value] = "<span style=\"color:red;\">".get_class($e).": ".get_class($c)." (".$e->getTable().", ".$e->getField().");\n".$e->getTraceAsString()."</span>";
+					$done[] = $key;
 				} catch (Exception $e){
-					$return[$value] = "Exception: ".$e->getMessage()."; ".print_r(DBStorage::$lastQuery, true);
+					$this->updateExeptions[] = $e;
+					$return[$value] = "<span style=\"color:red;\">".get_class($e).": ".get_class($c).", ".$e->getMessage().";\n".$e->getTraceAsString()."</span>";
+					$done[] = $key;
 				}
 			}
 		}
+		#($return);
 		
 		mUserdata::setUserdataS("DBVersion", Phynx::build(), "", -1);
 		$_SESSION["CurrentAppPlugins"] = $currentPlugins;

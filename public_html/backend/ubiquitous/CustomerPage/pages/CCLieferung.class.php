@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 
 ini_set('session.gc_maxlifetime', 24 * 60 * 60);
@@ -31,7 +31,11 @@ class CCLieferung implements iCustomContent {
 	}
 	
 	function getLabel(){
-		return "Lieferungs-Erfassung";
+		return "Lieferungen";
+	}
+	
+	public function getApps(){
+		return [];
 	}
 	
 	function getCMSHTML() {
@@ -195,6 +199,9 @@ class CCLieferung implements iCustomContent {
 
 		$html = "";
 		
+		$D = new Datum();
+		$D->normalize();
+		$D->subMonth();
 		
 		$T = new HTMLTable(2);#, "Bitte wählen Sie einen Lieferschein");
 		$T->setTableStyle("width:100%;margin-top:10px;");
@@ -208,6 +215,7 @@ class CCLieferung implements iCustomContent {
 		$AC->addAssocV3("status", "=", "delivered");
 		#$AC->addOrderV3("datum", "DESC");
 		$AC->addOrderV3("nummer", "DESC");
+		$AC->addAssocV3("datum", ">", $D->time());
 		#$AC->setLimitV3(100);
 		#$AC->addJoinV3("Adresse", "t2.AdresseID", "=", "AdresseID");
 		$i = 0;

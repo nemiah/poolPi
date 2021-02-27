@@ -1,13 +1,13 @@
 <?php
 /**
- *  This file is part of lightCRM.
+ *  This file is part of phynx.
 
- *  lightCRM is free software; you can redistribute it and/or modify
+ *  phynx is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3 of the License, or
  *  (at your option) any later version.
 
- *  lightCRM is distributed in the hope that it will be useful,
+ *  phynx is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class CRMHTMLGUI extends HTMLGUIX {
 	#private $types = array();
@@ -27,7 +27,7 @@ class CRMHTMLGUI extends HTMLGUIX {
 
 	private $functionDelete = "deleteClass('%CLASSNAME','%CLASSID', function() { contentManager.reloadFrame('contentRight'); contentManager.emptyFrame('contentLeft'); /*ADD*/ },'Eintrag löschen?');";
 	private $functionSave = "function(transport) { contentManager.setLeftFrame('%CLASSNAME', %CLASSID); contentManager.reloadFrame('contentLeft'); contentManager.updateLine('%CLASSNAMEForm', %CLASSID, 'm%CLASSNAME'); }";
-	private $functionSaveNew = "function(transport) { contentManager.reloadFrame('contentRight'); contentManager.loadFrame('contentLeft', '%CLASSNAME', transport.responseText); }";
+	private $functionSaveNew = "function(transport) { contentManager.reloadFrame('contentRight'); contentManager.loadFrame('contentLeft', '%CLASSNAME', transport.responseData ? transport.responseData.ID : transport.responseText); }";
 	private $functionAbort = "contentManager.restoreFrame('contentLeft','lastPage', true);";
 	private $functionEdit = "contentManager.backupFrame('contentLeft','lastPage', true); contentManager.loadFrame('contentLeft','%CLASSNAME','%CLASSID','','%CLASSNAMEGUI;edit:ok');";
 
@@ -136,7 +136,7 @@ class CRMHTMLGUI extends HTMLGUIX {
 			
 			$Buttons .= $B;
 		}
-		
+
 		$abort = "<div>$BA$Buttons</div><div style=\"clear:left;height:10px;\"></div>";
 
 		
@@ -165,6 +165,12 @@ class CRMHTMLGUI extends HTMLGUIX {
 		foreach($this->inputStyles AS $k => $n)
 			$tab->setInputStyle($k, $n);
 		
+		foreach($this->descriptionsField AS $n => $l)
+			$tab->setDescriptionField($n, T::_($l));
+		
+		foreach($this->fieldEvents AS $k => $v)
+			$tab->addJSEvent($v[0], $v[1], $v[2]);
+		
 		$tab->setValues($this->object);
 
 		if($this->object->getID() == -1)
@@ -174,6 +180,8 @@ class CRMHTMLGUI extends HTMLGUIX {
 
 		$tab->setSaveClass($this->className, $this->object->getID(), str_replace(array("%CLASSNAME","%CLASSID"), array($this->className, $this->object->getID()), $save), $this->name);
 
+		$tab->useRecentlyChanged();
+		
 		return $abort.$tab;
 	}
 
@@ -193,8 +201,8 @@ class CRMHTMLGUI extends HTMLGUIX {
 		if($widths == null) $widths = array(700, 132, 218);
 
 		$tab = new HTMLTable(2);
-
-		$tab->setTableStyle("width:$widths[0]px;margin-left:10px;");
+		
+		$tab->setTableStyle("width:$widths[0]px;max-width:$widths[0]px;margin-left:10px;");
 		$tab->setColWidth(1, "50%");
 		$tab->setColWidth(2, "50%");
 
@@ -280,7 +288,7 @@ class CRMHTMLGUI extends HTMLGUIX {
 		}
 		
 		$row[] = $TC;
-
+		
 		if(count($row) == 1)
 			$row[] = "";
 		

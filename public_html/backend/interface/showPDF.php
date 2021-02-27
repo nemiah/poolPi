@@ -15,12 +15,17 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 require "../classes/backend/BackgroundPluginState.class.php";
 require "../classes/toolbox/BPS.class.php";
 require "../classes/toolbox/Util.class.php";
-session_name("phynx_".sha1(str_replace("".DIRECTORY_SEPARATOR."interface".DIRECTORY_SEPARATOR."showPDF.php","".DIRECTORY_SEPARATOR."system".DIRECTORY_SEPARATOR."connect.php",__FILE__)));
+
+$physion = "default";
+if(isset($_GET["physion"]))
+	$physion = $_GET["physion"];
+
+session_name("phynx_".sha1(str_replace("".DIRECTORY_SEPARATOR."interface".DIRECTORY_SEPARATOR."showPDF.php","".DIRECTORY_SEPARATOR."system".DIRECTORY_SEPARATOR."connect.php",__FILE__)).($physion != "default" ? "_$physion" : ""));
 session_start();
 
 if(!isset($_SESSION["BPS"]))

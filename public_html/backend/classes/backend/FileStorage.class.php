@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class FileStorage {
 	protected $instance;
@@ -78,7 +78,32 @@ class FileStorage {
 			$A->FileName = $ex[count($ex) - 1];
 			$A->FileIsDir = $isDir;
 			$A->FileSize = filesize($file);
-			if(is_readable($file) AND $isDir == "0" AND function_exists("mime_content_type")) $A->FileMimetype = mime_content_type($file);
+			if(is_readable($file) AND $isDir == "0" AND function_exists("mime_content_type")) 
+				$A->FileMimetype = mime_content_type($file);
+			
+			if(is_readable($file) AND $isDir == "0" AND !function_exists("mime_content_type")) {
+				switch(Util::ext($file)){
+					case "pdf":
+						$A->FileMimetype = "application/pdf";
+					break;
+				
+					case "jpg":
+					case "jpeg":
+						$A->FileMimetype = "image/jpeg";
+					break;
+				
+					case "png":
+					case "svg":
+						$A->FileMimetype = "image/".Util::ext($file);
+					break;
+				
+					case "htm":
+					case "html":
+						$A->FileMimetype = "text/html";
+					break;
+				}
+			}
+			
 			$A->FileIsWritable = is_writable($file);
 			$A->FileIsReadable = is_readable($file);
 			$A->FileCreationDate = filectime($file);
@@ -89,6 +114,12 @@ class FileStorage {
 	}
 	
 	public static function getFilesDir(){
+		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
+		try {
+			return Aspect::joinPoint("around", __CLASS__, __METHOD__);
+		} catch (AOPNoAdviceException $e) {}
+		// </editor-fold>
+
 		$path = realpath(Util::getRootPath())."/specifics/";
 		
 		if(!file_exists($path.".htaccess") AND is_writable($path))
@@ -113,10 +144,19 @@ class FileStorage {
 				chmod($dir, 0777);
 			}
 			
-			return realpath($dir)."/";
+			return str_replace("\\", "/", realpath($dir))."/";
 		}
 		
-		return $path;
+		if(Session::isPluginLoaded("multiInstall") AND isset($_SESSION["DBData"]) AND isset($_SESSION["DBData"]["httpHost"])){# AND $_SESSION["DBData"]["httpHost"] != "*"){
+			$path .= "Mandant_".$_SESSION["DBData"]["InstallationID"]."/";
+			
+			if(!file_exists($path)){
+				mkdir($path, 0777, true);
+				chmod($path, 0777);
+			}
+		}
+		
+		return str_replace("\\", "/", $path);
 	}
 	
 	public static function getElementDir($class, $id){
@@ -129,7 +169,10 @@ class FileStorage {
 		$dir = realpath($this->dir);
 		$dir .= "/";
 		
-		if(strpos($dir,"specifics") === false AND !$this->forceDir) $dir = self::getFilesDir();#realpath("../specifics")."/";
+		$checkSpecifics = Aspect::joinPoint("check", $this, __METHOD__, array(), true);
+		
+		if($checkSpecifics AND strpos($dir,"specifics") === false AND !$this->forceDir) 
+			$dir = self::getFilesDir();
 		
 		$dirs = array();
 		$files = array();

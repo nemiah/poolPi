@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 abstract class Collection {
 	protected $A = null;
@@ -171,11 +171,17 @@ abstract class Collection {
 		#if(!$this->checkIfMyTableExists()) {
 
 			$creates = $this->getMyTablesInfos();
-			$message = "Führe SQL aus...<br />";
+			$message = "Führe SQL aus...<br>";
 			
 			$CI = $creates->getNextEntry();
 			while($CI != null){
 				$CIA = $CI->getA();
+				if(trim($CIA->MySQL) == ""){
+					$message .= "Keine Tabellen-Information!";
+					$CI = $creates->getNextEntry();
+					continue;
+				}
+				
 				$CIA->MySQL = str_replace("%%&ESCSLASH%%&","\'",$CIA->MySQL);
 				$CIA->MSSQL = str_replace("%%&ESCSLASH%%&","\'",$CIA->MSSQL);
 				$message .= SqlFormatter::format(htmlentities($CIA->MySQL), false);
@@ -187,9 +193,11 @@ abstract class Collection {
 					$connection->affected_rows = mysql_affected_rows();
 				}
 				$CI = $creates->getNextEntry();
-				$message .= "<br /><br />Anzahl betroffener Datensätze: ".$connection->affected_rows."<br />";
-				if($connection->error) $message .= "<span style=\"color:red;\">Es ist ein SQL-Fehler aufgetreten: ".$connection->error."</span><br />";
-				else $message .= "<span style=\"color:green;\">Es ist kein MySQL-Fehler aufgetreten</span><br />";
+				$message .= "<br><br>Anzahl betroffener Datensätze: ".$connection->affected_rows."<br>";
+				if($connection->error) 
+					$message .= "<span style=\"color:red;\">Es ist ein SQL-Fehler aufgetreten: ".$connection->error."</span><br>";
+				else 
+					$message .= "<span style=\"color:green;\">Es ist kein MySQL-Fehler aufgetreten</span><br>";
 				#$message .= "<br /><br />";
 			}
 		#} else $message = "Diese Tabelle wurde bereits angelegt";
@@ -503,7 +511,9 @@ abstract class Collection {
 			return "m".$this->collectionOf;
 			
 		$n = get_class($this);
-		if(strstr($n,"GUI")) $n = get_parent_class($this);
+		if(strstr($n,"GUI")) 
+			$n = get_parent_class($this);
+		
 		return $n;
 	}
 
@@ -563,7 +573,7 @@ abstract class Collection {
 			$this->Adapter->setSelectStatement("table", $this->collectionOf);
 		
 		if($id != -1)
-			$this->setAssocV3((count($gT) == 0 ? $this->collectionOf : $gT[0])."ID","=",$id);
+			$this->setAssocV3("t1.".(count($gT) == 0 ? $this->collectionOf : $gT[0])."ID","=",$id);
 		
 		if($returnCollector) 
 			$this->collector = $this->Adapter->lCV4();
@@ -581,19 +591,32 @@ abstract class Collection {
 	 * @param $entriesPerPage[optional](Integer) Number of entries per page
 	 */
 	public function loadMultiPageMode($id = -1, $page = 0, $entriesPerPage = 20){
-		if($entriesPerPage == 0){
-			$c = $this->getClearClass();#str_replace("GUI", "", get_class($this));
-			$mU = new mUserdata();
-			$entriesPerPage = $mU->getUDValue("entriesPerPage$c");
-			if($entriesPerPage == null) $entriesPerPage = 20;
-		}
+		if($entriesPerPage == 0)
+			$entriesPerPage = mUserdata::getUDValueS("entriesPerPage".$this->getClearClass(), 20);
+		
+		if($page == "")
+			$page = 0;
+		
 		$num = $this->getAffectedRows($id);
-		$this->setLimitV3($page * $entriesPerPage.",".$entriesPerPage);
+		$this->setLimitV3(($page * $entriesPerPage).",".$entriesPerPage);
 		
 		if(PMReflector::implementsInterface(get_class($this),"iOrderByField")){
 			$sort = new mUserdata();
 			$sort = $sort->getUDValue("OrderByFieldInHTMLGUI".$this->getClearClass());
-			if($sort != null) $this->setOrderV3(substr($sort,0,strpos($sort,";")),substr($sort,strpos($sort,";")+1));
+			if($sort != null) {
+				$field = substr($sort, 0, strpos($sort, ";"));
+				#if(($field * 1)."" === $field){
+				if(is_numeric($field)){
+					$o = $this->getOrderByFields();
+					foreach($o[$field]->orderBy AS $k => $n){
+						if($k == 0)
+							$this->setOrderV3($n, substr($sort, strpos($sort, ";") + 1));
+						else
+							$this->addOrderV3($n, substr($sort, strpos($sort, ";") + 1));
+					}
+				} else
+					$this->setOrderV3($field, substr($sort, strpos($sort, ";") + 1));
+			}
 		}
 			
 		$this->lCV3($id);
@@ -626,11 +649,15 @@ abstract class Collection {
 		$this->addDataType("anyField","I");
 		$this->addDataType("totalNum","I");
 		$this->lCV3();
+		
 		$e = $this->getNextEntry();
 		$this->resetPointer();
 		$this->collector = null;
 		$this->Adapter->newSelectStatement();
-		if($e == null) return 0;
+		
+		if($e == null) 
+			return 0;
+		
 		return $e->getA()->totalNum;
 	}
 	
@@ -640,6 +667,9 @@ abstract class Collection {
 	 * @return Integer Number of entries in Collector
 	 */
 	public function numLoaded(){
+		if($this->collector === null)
+			return 0;
+		
 		return count($this->collector);
 	}
 	
@@ -682,11 +712,20 @@ abstract class Collection {
 		}
 		$this->isFiltered = $fC;
 
+		if(!PMReflector::implementsInterface(get_class($this),"iSearchFilterMulti") AND !PMReflector::implementsInterface(get_class($this),"iSearchFilter"))
+			return $fC;
+		
+		
+		$K = mUserdata::getUDValueS("searchFilterMulti".$this->getClearClass(), "");
+		if($K != ""){
+			$this->searchFilterMulti(explode(";;", trim($K, ";")));
+			$this->isFiltered = true;
+			$fC = true;
+		}
+		
 		if(!PMReflector::implementsInterface(get_class($this),"iSearchFilter"))
 			return $fC;
 		
-		$mU = new mUserdata();
-
 		$K = mUserdata::getUDValueS("searchFilterInHTMLGUI".$this->getClearClass());
 		$F = $this->getSearchedFields();
 		
@@ -695,9 +734,14 @@ abstract class Collection {
 		 
 		foreach($F as $k => $v)
 			$this->addAssocV3("$v","LIKE",'%'.$K.'%',($k == 0 ? "AND" : "OR"),"sfs");
-			
+		
 		$this->isFiltered = true;
+		
 		return true;
+	}
+	
+	public function searchFilterMulti(array $query){
+		
 	}
 	
 	/**
@@ -736,7 +780,8 @@ abstract class Collection {
 		$this->setLimitV3("1");
 		$this->lCV3();
 		
-		if($this->numLoaded() == 0) return 1;
+		if($this->numLoaded() == 0) 
+			return 1;
 		
 		$C = $this->getNextEntry();
 		$CA = $C->getA();
@@ -751,7 +796,7 @@ abstract class Collection {
 		return $xml->getXML();
 	}
 	
-	public function asJSON(){
+	public function asJSON($append = null){
 		#$this->lCV3();
 		
 		$array = array();
@@ -762,6 +807,9 @@ abstract class Collection {
 			
 			$array[] = $subArray;
 		}
+		
+		if($append)
+			$array[] = $append;
 		
 		return json_encode($array, defined("JSON_UNESCAPED_UNICODE") ? JSON_UNESCAPED_UNICODE : 0);
 	}
@@ -779,7 +827,7 @@ abstract class Collection {
 		return $this->getNextEntry($lazyLoad);
 	}
 	
-	public function setTableLock(string $table, boolean $lock){
+	public function setTableLock(string $table, bool $lock){
 		if($this->Adapter == null)
 			$this->loadAdapter();
 		

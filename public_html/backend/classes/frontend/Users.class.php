@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class Users extends anyC {
 	function __construct(){
@@ -36,6 +36,8 @@ class Users extends anyC {
 			$U = new Users();
 			$U->addAssocV3("isAdmin", "=", "0");
 			$U->addAssocV3("UserType", "=", $type);
+			
+			Aspect::joinPoint("alterSystem", __CLASS__, __METHOD__, [$U]);
 		}
 
 		return $U;
@@ -64,9 +66,9 @@ class Users extends anyC {
 		return $U;
 	}
 
-	public static function login($username, $password, $application, $language = "default", $isCustomerPage = false){
+	public static function login($username, $password, $application, $language = "default", $isCustomerPage = false, $isPWEncrypted = true){
 		$U = new Users();
-		return $U->doLogin(array("loginUsername" => $username, "loginSHAPassword" => $password, "anwendung" => $application, "loginSprache" => $language, "isCustomerPage" => $isCustomerPage)) > 0;
+		return $U->doLogin(array("loginUsername" => $username, "loginSHAPassword" => $password, "anwendung" => $application, "loginSprache" => $language, "isCustomerPage" => $isCustomerPage, "loginPWEncrypted" => $isPWEncrypted)) > 0;
 	}
 	
 	public function getUser($username, $password, $isSHA = false){
@@ -76,7 +78,10 @@ class Users extends anyC {
 		$user = $this->getAppServerUser($username, !$isSHA ? sha1($password) : $password);
 		if($user != null)
 			return $user;
-
+		
+		if(class_exists("ZLog", false))
+			ZLog::Write(LOGLEVEL_DEBUG, "lcrm (".__LINE__.")::Logon():No appserver user! SHA? ".($isSHA ? "yes" : "no")."; $username");
+		
 		$user = LoginAD::getUser($username, $password);
 		if($user != null)
 			return $user;
@@ -147,7 +152,10 @@ class Users extends anyC {
 					return $U;
 				}
 			}
-		} catch (Exception $e){}
+		} catch (Exception $e){
+			if(class_exists("ZLog", false))
+				ZLog::Write(LOGLEVEL_WARN, "lcrm (".__LINE__.")::Logon():Exception: ".get_class($e).": ".$e->getMessage());
+		}
 
 		return null;
 	}
@@ -188,13 +196,18 @@ class Users extends anyC {
 			parse_str($ps, $p);
 		else 
 			$p = $ps;
-		#if($p["loginPassword"] == ";;;-1;;;") return 0;
 
 		$this->doLogout();
+		
+		$_SESSION["DBData"] = $_SESSION["S"]->getDBData(null, isset($p["loginMandant"]) ? $p["loginMandant"] : null);
 
-		$_SESSION["DBData"] = $_SESSION["S"]->getDBData();
-
+		
 		try {
+			if(isset($p["loginMandant"]) AND file_exists(Util::getRootPath()."plugins/multiInstall/plugin.xml")){
+				$DB = new DBStorage();
+				$DB->renewConnection();
+			}
+
 			$U = $this->getUser($p["loginUsername"], $p["loginSHAPassword"], $p["loginPWEncrypted"]);
 			if($U === null) return 0;
 
@@ -227,7 +240,7 @@ class Users extends anyC {
 				$UA->password = "Admin";
 				if($p["loginSprache"] != "default")
 					$UA->language = $p["loginSprache"];
-				
+				$UA->isInstall = true;
 				$UA->isAdmin = 1;
 				$U = new User(-1);
 				$U->setA($UA);
@@ -267,6 +280,26 @@ class Users extends anyC {
 		return $users;
 	}
 
+	public function changePassword($username, $oldPassword, $newPassword1, $newPassword2){
+		if($newPassword1 == sha1("") OR $newPassword2 == sha1(""))
+			Red::errorD ("Bitte geben Sie neue Passwörter ein");
+		
+		if($newPassword1 != $newPassword2)
+			Red::errorD ("Die Passwörter stimmen nicht überein");
+		
+		$U = $this->getUser($username, $oldPassword, true);
+		if(!$U)
+			Red::errorD ("Benutzer unbekannt");
+		
+		if($U->A("isAdmin"))
+			Red::errorD ("Benutzer unbekannt");
+		
+		$U->changeA("SHApassword", $newPassword1);
+		$U->saveMe(false, false, false);
+		
+		Red::messageD("Passwort geändert!");
+	}
+	
 	public function lostPassword($username){
 		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
 		try {
@@ -275,14 +308,12 @@ class Users extends anyC {
 		} catch (AOPNoAdviceException $e) {}
 		Aspect::joinPoint("before", $this, __METHOD__, $MArgs);
 		// </editor-fold>
+				
+		if($username == "") 
+			Red::errorC("User", "lostPasswordErrorUser");
 
-		if($username == "") Red::errorC("User", "lostPasswordErrorUser");
 
-		$Lang = $this->loadLanguageClass("User")->getText();
-
-		$ac = new anyC();
-		$ac->setCollectionOf("User");
-		$ac->addAssocV3("username", "=", $username);
+		$ac = anyC::get("User", "username", $username);
 		$ac->lCV3();
 
 		$U = $ac->getNextEntry();
@@ -301,6 +332,19 @@ class Users extends anyC {
 
 		if($U == null) Red::errorC("User", "lostPasswordErrorUser");
 
+		
+		if(
+			file_exists(Util::getRootPath()."/ubiquitous/Passwort/Passwort.class.php") 
+			AND (strpos(Environment::getS("pluginsExtra", ""), "mPasswort") !== false 
+				OR strpos(Environment::getS("allowedPlugins", ""), "mPasswort") !== false)){
+			require_once Util::getRootPath()."/ubiquitous/Passwort/Passwort.class.php";
+			
+			$P = new Passwort();
+			$P->request($U);
+			Red::alertD("Sie haben eine neue Passwortanforderung per E-Mail erhalten.");
+		}
+			
+		
 		$Admin = new anyC();
 		$Admin->setCollectionOf("User");
 		$Admin->addAssocV3("isAdmin", "=", "1");
@@ -310,14 +354,14 @@ class Users extends anyC {
 		if($Admin->A("UserEmail") == "") Red::errorC("User", "lostPasswordErrorAdmin");
 
 		$mail = new htmlMimeMail5();
-		$mail->setFrom("phynx@".$_SERVER["HTTP_HOST"]);
-		$mail->setSubject("[phynx] Password recovery for user $username");
+		$mail->setFrom("open3A@".$_SERVER["HTTP_HOST"]);
+		$mail->setSubject("[open3A] Password recovery for user $username");
 		$mail->setText(wordwrap("Dear ".$Admin->A("name").",
 
-you received this email because the user '$username' of the phynx framework at $_SERVER[HTTP_HOST] has lost his password and is requesting a new one.
+you receive this email because the user '$username' of the open3A installation at $_SERVER[HTTP_HOST] has lost his password and is requesting a new one.
 
 Best regards
-	phynx", 80));
+	open3A", 80));
 		if(!$mail->send(array($Admin->A("UserEmail"))))
 			Red::errorC("User", "lostPasswordErrorAdmin");
 

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 
 var Interface = {
@@ -23,15 +23,20 @@ var Interface = {
 	TabBarLast: null,
 	TabBarLastTab: null,
 	isLoading: false,
+	mobileMaxWidth: 1000,
+	BroadcastChannel: null,
+	locale: 'de_DE',
+	application: null,
+	
+	mobile: function(){
+		return $j(window).width() <= Interface.mobileMaxWidth;
+	},
 	
 	init: function(){
-		if($('wrapperHandler')){
-			Interface.isDesktop = true;
+		Interface.resizeWrapper();
+		$j(window).on('resize', function() {
 			Interface.resizeWrapper();
-			$j(window).on('resize', function() {
-				Interface.resizeWrapper();
-			});
-		}
+		});
 		
 		$j(window).on("online", function(){
 			Interface.online();
@@ -54,6 +59,28 @@ var Interface = {
 		$j('#offlineMessage').remove();
 	},
 	
+	setup: function(callback){
+		contentManager.rmePCR("Colors", "-1", "getInterface", "",  function(transport){
+			contentManager.layout = transport.responseData.layout;
+			$j('#interfaceLayout').prop('href', "./styles/standard/"+transport.responseData.layout+".css");
+			$j('#interfaceColors').prop('href', "./styles/"+transport.responseData.colors+"/colors.css");
+			$j('#interfaceHighContrast').prop('href', transport.responseData.highContrast);
+			
+			Interface.resizeWrapper();
+			
+			if(typeof callback != "undefined")
+				callback();
+			
+			if(!contentManager.updateTitle)
+				return;
+
+			if(contentManager.layout != "desktop") 
+				document.title = transport.responseData.title;
+			else
+				$j("#wrapperHandler").html(transport.responseData.title);
+    	});
+	},
+	
 	/**
 	 * @deprecated text
 	 */
@@ -71,8 +98,13 @@ var Interface = {
 	},
 	
 	resizeWrapper: function() {
+		if(contentManager.layout != "desktop"){
+			$j('#wrapper').css("height", "auto").css("width", "auto");
+			return;
+		}
+		
 		size = Overlay.getPageSize(true);
-		$j('#wrapper').css("height", ($j(window).height() - 150)+'px').css("width", (contentManager.maxWidth(true) - 250 - 50)+'px');
+		$j('#wrapper').css("height", ($j(window).height() - 230)+'px').css("width", (contentManager.maxWidth(true) - 250 - 50)+'px');
 	},
 	
 	translateStatusMessage: function(message, writeToFieldID){
@@ -122,14 +154,7 @@ var Interface = {
 	},
 
 	showLoading: function(){
-		/*if(!$('busyBox') || !Interface.isLoading) return;
-
-		else {
-			Effect.Fade('busyBox', {duration: 0.3, from: 1, to: 0.3});
-			Effect.Fade('busyBox', {duration: 0.3, from: 0.3, to: 1, delay: 0.1});
-		}
 		
-		window.setTimeout("Interface.showLoading()", 800);*/
 	},
 	
 	notifyPermission: function(){
@@ -153,17 +178,20 @@ var Interface = {
 
 	},
 	
-	notify: function(title, message){
+	notify: function(title, message, timeout){
 		if(typeof Notification != "function")
 			return;
 		
 		if(Interface.notifyPermission() != "granted")
 			return;
 		
-		Interface.notifySend(title, message);
+		Interface.notifySend(title, message, timeout);
 	},
 			
-	notifySend: function(title, message){
+	notifySend: function(title, message, timeout){
+		if(typeof timeout == 'undefined')
+			timeout = 5000;
+		
 		var N = new Notification(title, {
 			body: message
 		});
@@ -171,7 +199,7 @@ var Interface = {
 		if(typeof N.close == "function")
 			setTimeout(function(){
 				N.close();
-			}, 5000);
+			}, timeout);
 
 	},
 			
@@ -198,7 +226,7 @@ var Interface = {
 		contentManager.currentPlugin = plugin;
 		
 		if($(plugin+'MenuEntry'))
-			setHighLight($(plugin+'MenuEntry'));
+			Menu.setHighLight($(plugin+'MenuEntry'));
 	}
 
 }
@@ -247,8 +275,6 @@ function showMessage(message){
 	//createGrowl(message);
 	$j('#messenger').html(message);
 	$j('#messenger').fadeIn(100, function(){ $j(this).delay(1000).fadeOut(300); });
-	/*new Effect.Move("messenger",{x:0, y:0, mode: 'absolute', duration: 0.2});
-	new Effect.Move("messenger",{x:-210, y:0, mode: 'absolute', delay:2, duration: 0.2});*/
 	
 }
 

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 
@@ -62,6 +62,9 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			$hide = true;
 		}
 		
+		if(Applications::activeApplication() == "supportBox")
+			return "";
+		
 		$gui = new HTMLGUI();
 		$gui->setName("Datenbank-Zugangsdaten");
 		if($this->collector != null) $gui->setAttributes($this->collector);
@@ -105,9 +108,14 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			$BMail = $ST->addButton("Mail-Server", "./plugins/Installation/serverMail.png");
 			#$BMail->popup("edit", "Mail-Server", "LoginData", $MailServerID, "getPopup", "", "LoginDataGUI;preset:mailServer");
 			$BMail->popup("edit", "Mail-Server", "mInstallation", -1, "manageMailservers");
-
+			
 			$BTestMail = $ST->addButton("Mailversand\ntesten", "mail");
 			$BTestMail->popup("mailTest", "Mailversand testen", "mInstallation", "-1", "testMailGUI");
+			
+			$BMailS = $ST->addButton("Mail-\nEinstellungen", "system");
+			$BMailS->popup("edit", "Mail-Einstellungen", "mInstallation", -1, "manageMailsettings");
+			$BMailS->className("backgroundColor0");
+			
 			
 			if(Session::isPluginLoaded("mJabber")){
 				$JabberServer = LoginData::get("JabberServerUserPass");
@@ -209,7 +217,7 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 		}
 		catch (NoDBUserDataException $e) { 
 			if(BPS::getProperty("mInstallationGUI", "showErrorText", false)){
-				$t->addRow(isset($text["wrongData"]) ? $text["wrongData"] : "Mit den angegebenen Datenbank-Zugangsdaten kann keine Verbindung aufgebaut werden.<br /><br />Wenn sie korrekt sind, werden hier weitere Möglichkeiten angezeigt angezeigt.");
+				$t->addRow("Mit den angegebenen Datenbank-Zugangsdaten kann keine Verbindung aufgebaut werden.<br><br>Wenn sie korrekt sind, werden hier weitere Möglichkeiten angezeigt angezeigt.");
 				$t->addRowClass("backgroundColor0");
 				$t->addRowStyle("color:red;");
 			}
@@ -234,7 +242,7 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 					$BReload->style("float:right;margin:10px;");
 					
 					if(!$File->A("FileIsWritable"))
-						$BR = "Bitte machen Sie die Datei /system/connect.php für den Webserver beschreibbar, damit phynx auf die ältere Verbindungsart umstellen kann.<br /><br />Verwenden Sie dazu Ihr FTP-Programm. Klicken Sie mit der rechten Maustaste auf die Datei auf dem Server, wählen Sie \"Eigenschaften\", und geben Sie den Modus 666 an, damit sie durch den Besitzer, die Gruppe und alle Anderen les- und schreibbar ist.$BReload";
+						$BR = "Bitte machen Sie die Datei /system/connect.php für den Webserver beschreibbar, damit open3A auf die ältere Verbindungsart umstellen kann.<br /><br />Verwenden Sie dazu Ihr FTP-Programm. Klicken Sie mit der rechten Maustaste auf die Datei auf dem Server, wählen Sie \"Eigenschaften\", und geben Sie den Modus 666 an, damit sie durch den Besitzer, die Gruppe und alle Anderen les- und schreibbar ist.$BReload";
 					$t->addRow(array("$B <b>Möglicherweise ist die MySQLi-Erweiterung auf Ihrem Server nicht korrekt konfiguriert.</b><br /><br />$BR"));
 					$t->addRowClass("backgroundColor0");
 					
@@ -260,6 +268,28 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 
 
 		#return $ST.$g;#.$help;
+	}
+	
+	public function manageMailsettings(){
+		$F = new HTMLForm("mailsettings", array("systemEmail"));
+		$F->getTable()->setColWidth(1, 120);
+		$F->useRecentlyChanged();
+		
+		$F->setValue("systemEmail", mUserdata::getGlobalSettingValue("mailSystemEmail", ""));
+		
+		$F->setLabel("systemEmail", "System E-Mail");
+		$F->setDescriptionField("systemEmail", "Absender-Adresse für Systemnachrichten");
+		
+		$F->setSaveRMEPCR("Speichern", "", "mInstallation", -1, "manageMailsettingsSave", OnEvent::closePopup("mInstallation"));
+		
+		echo $F;
+	}
+	
+	public function manageMailsettingsSave($systemEmail){
+		if(trim($systemEmail) != "" AND !Util::checkIsEmail($systemEmail))
+			Red::alertD ("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
+		
+		mUserdata::setUserdataS("mailSystemEmail", $systemEmail, "", -1);
 	}
 	
 	public function manageMailservers(){
@@ -318,7 +348,7 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			$hasDBConnection = true;
 		} catch(Exception $e){}
 		
-		if(!$File->A("FileIsWritable") AND !$hasDBConnection){
+		if(Applications::activeApplication() != "supportBox" AND !$File->A("FileIsWritable") AND !$hasDBConnection){
 			$message = "<p style=\"padding:20px;font-size:20px;color:#555;text-align:center;\">".$_SESSION["applications"]->getActiveApplication()." ist auf diesem Server noch nicht installiert.</p>";
 			$html = "<div style=\"width:600px;margin:auto;line-height:1.5;\">
 				<p>
@@ -363,16 +393,16 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			}
 			
 		} catch (NoDBUserDataException $e) {
-			$message = "<p style=\"padding:10px;font-size:20px;color:#555;text-align:center;color:red;\">Mit den angegebenen Datenbank-Zugangsdaten kann keine Verbindung aufgebaut werden.</p>";
+			$message = "<p style=\"padding:10px;font-size:20px;color:#555;text-align:center;color:red;\">Mit den angegebenen Datenbank-Zugangsdaten kann keine Verbindung aufgebaut werden.<br><small style=\"color:grey;\">".$e->getMessage()."</small></p>";
 			
-			echo OnEvent::script("contentManager.loadFrame('contentLeft','Installation','1');");
+			echo OnEvent::script("contentManager.loadFrame('contentLeft','Installation','".(isset($_SESSION["DBData"]) ? $_SESSION["DBData"]["InstallationID"] : 1)."');");
 			
 			if(PHYNX_MAIN_STORAGE == "MySQL") {
 				try {
 					if(!function_exists("mysql_pconnect"))
 						throw new Exception ();
 					
-						$DB1 = new DBStorageU();
+					$DB1 = new DBStorageU();
 					
 					$BN = new Button("Hinweis", "notice", "icon");
 					$BN->style("float:left;margin-right:10px;");
@@ -399,7 +429,7 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 					$B->id("recheckButton");
 					
 					if(!$File->A("FileIsWritable"))
-						$BR = "<p style=\"margin-top:20px;\">Bitte machen Sie die Datei /system/connect.php für den Webserver beschreibbar, damit phynx auf die ältere Verbindungsart umstellen kann.<br /><br />Verwenden Sie dazu Ihr FTP-Programm. Klicken Sie mit der rechten Maustaste auf die Datei auf dem Server, wählen Sie \"Eigenschaften\", und geben Sie den Modus 666 an, damit sie durch den Besitzer, die Gruppe und alle Anderen les- und schreibbar ist.
+						$BR = "<p style=\"margin-top:20px;\">Bitte machen Sie die Datei /system/connect.php für den Webserver beschreibbar, damit open3A auf die ältere Verbindungsart umstellen kann.<br /><br />Verwenden Sie dazu Ihr FTP-Programm. Klicken Sie mit der rechten Maustaste auf die Datei auf dem Server, wählen Sie \"Eigenschaften\", und geben Sie den Modus 666 an, damit sie durch den Besitzer, die Gruppe und alle Anderen les- und schreibbar ist.
 							</p><div style=\"width:350px;margin:auto;padding-top:20px;padding-bottom:20px;\">".$this->box($B, $A, "Erneut<br />prüfen")."</div>";
 
 					
@@ -414,10 +444,10 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 		catch (DatabaseNotFoundException $e) {
 			$message = "<p style=\"padding:10px;font-size:20px;color:#555;text-align:center;color:red;\">Die angegebene Datenbank konnte nicht gefunden werden.</p>";
 			
-			echo OnEvent::script("contentManager.loadFrame('contentLeft','Installation','1');");
+			echo OnEvent::script("contentManager.loadFrame('contentLeft', 'Installation','".(isset($_SESSION["DBData"]) ? $_SESSION["DBData"]["InstallationID"] : 1)."');");
 		}
 		catch (TableDoesNotExistException $e){
-			$message = "<p style=\"padding:10px;font-size:20px;color:#555;margin-bottom:40px;text-align:center;\">Ihre Datenbank hat derzeit noch keinen Inhalt.</p>";
+			$message = OnEvent::script("\$j('.installHiddenTab').hide();")."<p style=\"padding:10px;font-size:20px;color:#555;margin-bottom:40px;text-align:center;\">Ihre Datenbank hat derzeit noch keinen Inhalt.</p>";
 			
 			$ASetup = "\$j('#setupButton').attr('src', './plugins/Installation/bigLoader.png'); ".OnEvent::rme($this, "setupAllTables", "", "function(transport){ contentManager.contentBelow(transport.responseText); }");
 			
@@ -496,20 +526,31 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 		} catch(Exception $e){
 			die("<p style=\"padding:5px;color:red;\">Fehler beim Übergeben der E-Mail. ".$e->getMessage()."</p>");
 		}
-		$mail->setFrom("phynx Mailtest <".$mailfrom.">");
+		$mail->setFrom("open3A Mailtest <".$mailfrom.">");
 		if(!ini_get('safe_mode')) $mail->setReturnPath($mailfrom);
-		$mail->setSubject("phynx Mailtest");
+		$mail->setSubject("open3A Mailtest");
 
-		$mail->setText(wordwrap("Diese Nachricht wurde vom phynx Mailtester erzeugt. Ihre E-Mail-Einstellungen sind korrekt.", 80));
+		$mail->setText(wordwrap("Diese Nachricht wurde vom open3A Mailtester erzeugt. Ihre E-Mail-Einstellungen sind korrekt.", 80));
 		$adressen = array();
 		$adressen[] = $mailto;
-		if($mail->send($adressen))
-			echo "<p style=\"padding:5px;color:green;\">E-Mail erfolgreich übergeben.</p>";
-		else
+		if($mail->send($adressen)){
+			$data = $mail->getSMTPParams();
+			echo "<p style=\"padding:5px;color:green;\">E-Mail an ".$data['host']."(".$data["user"].") erfolgreich übergeben.</p>";
+		} else
 			echo "<p style=\"padding:5px;color:red;\">Fehler beim Übergeben der E-Mail. Bitte überprüfen Sie Ihre Server-Einstellungen.<br />Fehler: ".nl2br(print_r($mail->errors, true))."</p>";
+		
 		
 		/*
 		$mimeMail2 = new PHPMailer(false, substr($mailfrom, stripos($mailfrom, "@") + 1));
+		$mimeMail2->SMTPOptions = array(
+			'ssl' => array(
+				'verify_peer' => false,
+				'verify_peer_name' => false,
+				'allow_self_signed' => true
+			)
+		);
+		#$mimeMail2->Hostname = "cloud01.furtmeier.it";
+		$mimeMail2->SMTPDebug = 2;
 		#$mimeMail2->SMTPSecure = 'tls';
 		$mimeMail2->CharSet = "UTF-8";
 		$mimeMail2->Subject = "phynx Mailtest V2";
@@ -525,7 +566,9 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			echo "<p style=\"padding:5px;color:green;\">E-Mail 2 erfolgreich übergeben.</p>";
 		else
 			echo "<p style=\"padding:5px;color:red;\">Fehler beim Übergeben der E-Mail 2. Bitte überprüfen Sie Ihre Server-Einstellungen.<br />Fehler: ".nl2br(print_r($mimeMail2->ErrorInfo, true))."</p>";
-		 */
+		
+		echo "<pre>";
+		*/
 	}
 
 	public function setupAllTables($echoStatus = false){
@@ -541,19 +584,32 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 		
 		$message = "<p style=\"padding:10px;font-size:20px;color:green;margin-bottom:40px;text-align:center;\">Ihre Datenbank wurde erfolgreich eingerichtet.</p>";
 		
-		$action = "contentManager.loadPlugin('contentRight', 'Users');";
+		if(Applications::activeApplication() == "supportBox"){
+			$action = "contentManager.loadPlugin('contentRight', 'mSBInfo');";
+
+			$B = new Button("Die supportBox konfigurieren", "./plugins/Installation/benutzer.png", "icon");
+			$B->onclick($action);
+
+			$html = $this->box($B, $action, "Die supportBox<br>konfigurieren");
+		} else {
+		$action = "contentManager.loadPlugin('contentRight', 'Users'); contentManager.newClassButton('User',  function(transport){ }, 'contentLeft', 'UserGUI;edit:ok');";
 		
 		$B = new Button("Benutzer anlegen", "./plugins/Installation/benutzer.png", "icon");
 		$B->onclick($action);
 		
-		$html = $this->box($B, $action, "Einen Benutzer<br />anlegen");
+			$html = $this->box($B, $action, "Einen Benutzer<br>anlegen");
+		}
 		
-		
-		echo "$message<div style=\"width:350px;margin:auto;padding-bottom:40px;\">".$html."</div>";
+		echo "$message<div style=\"width:350px;margin:auto;padding-bottom:40px;\">".$html."</div>".OnEvent::script("\$j('.installHiddenTab').fadeIn();");
 	}
 	
 	public function updateAllTables($echoStatus = false){
 		set_time_limit(0);
+		
+		try {
+			$C = new Customizer(-1);
+			Customizer::updates("CustomizerPakete");
+		} catch (Exception $ex) { }
 		
 		$return = parent::updateAllTables();
 		if($echoStatus){
@@ -564,8 +620,11 @@ class mInstallationGUI extends mInstallation implements iGUIHTML2 {
 			}
 			echo "</pre>";
 		}
-		$message = "<p style=\"padding:10px;font-size:20px;color:green;margin-bottom:40px;text-align:center;\">Ihre Datenbank wurde erfolgreich aktualisiert.</p>";
-		
+		if(count($this->updateExeptions) == 0)
+			$message = "<p style=\"padding:10px;font-size:20px;color:green;margin-bottom:40px;text-align:center;\">Ihre Datenbank wurde erfolgreich aktualisiert.</p>";
+		else
+			$message = "<p style=\"padding:10px;font-size:20px;color:red;margin-bottom:40px;text-align:center;\">Bei der Aktualisierung ist ein Fehler aufgetreten! <a href=\"#\" onclick=\"Popup.load('Fehlerausgabe', 'mInstallation', '-1', 'updateAllTables', Array('1'), '', 'edit');return false;\">Fehler anzeigen</a></p>";
+			
 		$action = "userControl.doLogout();";
 		
 		$B = new Button("Benutzer abmelden", "./plugins/Installation/abmelden.png", "icon");

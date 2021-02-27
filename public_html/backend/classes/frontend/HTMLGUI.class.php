@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 
 class HTMLGUI implements icontextMenu {
@@ -26,6 +26,7 @@ class HTMLGUI implements icontextMenu {
 	protected $labels = array();
 	private $labelDescriptions = array();
 	private $fieldDescriptions = array();
+	private $fieldDescriptionsReplacement1 = array();
 	
 	protected $values = array();
 	protected $options = array();
@@ -95,7 +96,7 @@ class HTMLGUI implements icontextMenu {
 	private $classParentName;
 	#private $infoDropDown = array();
 	
-	protected $languageClass;
+	#protected $languageClass;
 	protected $texts;
 	
 	private $RowIDPrefix = "BrowserMain";
@@ -246,7 +247,7 @@ class HTMLGUI implements icontextMenu {
 	}
 	
 	function __construct(){
-		$this->languageClass = $this->loadLanguageClass("HTML");
+		#$this->languageClass = $this->loadLanguageClass("HTML");
 	}
 
 	/**
@@ -273,7 +274,7 @@ class HTMLGUI implements icontextMenu {
 	 * @param string $class
 	 * @return unknown_type
 	 */
-	function loadLanguageClass($class){
+	/*7function loadLanguageClass($class){
 		try {
 			$n = $class."_".$_SESSION["S"]->getUserLanguage();
 			$c = new $n();
@@ -286,7 +287,7 @@ class HTMLGUI implements icontextMenu {
 			}
 		}
 		return $c;
-	}
+	}*/
 	
 	function setRowIDPrefix($prefix){
 		$this->RowIDPrefix = $prefix."Browser";
@@ -378,6 +379,7 @@ class HTMLGUI implements icontextMenu {
 	 * @param string $a
 	 */
 	function hideAttribute($a){ $this->dontShow[$a] = 1; }
+	function unhideAttribute($a){ if(isset($this->dontShow[$a])) unset($this->dontShow[$a]); }
 	
 	function isQuickSearchable($plugin){
 		$this->quickSearchPlugin = $plugin;
@@ -398,8 +400,9 @@ class HTMLGUI implements icontextMenu {
 		$this->labelDescriptions[$attributeName] = $description;
 	}
 	
-	function setFieldDescription($attributeName,$description) {
+	function setFieldDescription($attributeName,$description, $replacement1 = null) {
 		$this->fieldDescriptions[$attributeName] = $description;
+		$this->fieldDescriptionsReplacement1[$attributeName] = $replacement1;
 	}
 	
 	/**
@@ -601,7 +604,7 @@ class HTMLGUI implements icontextMenu {
 		if(!isset($this->colStyles[$attributeName])) $this->colStyles[$attributeName] = "";
 		$this->colStyles[$attributeName] .= $style;
 		
-		if($this->colStyles[$attributeName]{strlen($this->colStyles[$attributeName]-1)} != ";")
+		if(mb_substr($this->colStyles[$attributeName], -1) != ";")
 			$this->colStyles[$attributeName].=";";
 	}
 	
@@ -637,6 +640,10 @@ class HTMLGUI implements icontextMenu {
 	
 	function setIsDisplayMode($b) {
 		$this->onlyDisplayMode = $b;
+	}
+	
+	function showInputs(){
+		return !$this->onlyDisplayMode;
 	}
 	
 	function setDeleteInDisplayMode($b) {
@@ -686,7 +693,7 @@ class HTMLGUI implements icontextMenu {
 				#$_SESSION["messages"]->addMessage("adding column for singleSelection mode (".implode(", ",$m).")");
 				$this->shownCols[] = "selectionCol";
 				$this->setColWidth("selectionCol","20px");
-				$this->selectionFunctions = "saveSelection('$m[1]','$m[2]','$m[3]','%%VALUE%%','".(isset($m[5]) ? $m[5] : "")."','".(isset($m[6]) ? $m[6] : "")."','".(isset($m[7]) ? $m[7] : "")."');".(isset($m[4]) ? " contentManager.loadFrame('contentRight','$m[4]');" : "");
+				$this->selectionFunctions = "contentManager.saveSelection('$m[1]','$m[2]','$m[3]','%%VALUE%%','".(isset($m[5]) ? $m[5] : "")."');".(isset($m[4]) ? " contentManager.loadFrame('contentRight','$m[4]');" : "");
 				$this->selectionRow = "<td><img class=\"mouseoverFade selectionButton\" onclick=\"$this->selectionFunctions\" src=\"./images/i2/cart.png\" /></td>";
 			}
 			if($m[0] == "customSelection"){
@@ -700,7 +707,7 @@ class HTMLGUI implements icontextMenu {
 				
 				$this->shownCols[] = "selectionCol";
 				$this->setColWidth("selectionCol","20px");
-				$this->selectionFunctions = "saveSelection('$m[1]','$m[2]','$m[3]','%%VALUE%%','$m[5]','$m[6]','$m[7]');";
+				$this->selectionFunctions = "contentManager.saveSelection('$m[1]','$m[2]','$m[3]','%%VALUE%%','$m[5]');";
 				$this->selectionRow = "<td><img class=\"mouseoverFade selectionButton\" onclick=\"$this->selectionFunctions\" src=\"./images/i2/cart.png\" /></td>";
 				$_SESSION["messages"]->addMessage("adding row to return from multiSelection mode");
 				$this->addRowAfter("0","addReturnButton");
@@ -727,11 +734,15 @@ class HTMLGUI implements icontextMenu {
 				if(strpos($this->events[$as][$j], "onchange=\"") !== false) $onchange .= str_replace("\"","",str_replace("onchange=\"","",$this->events[$as][$j]));
 		}
 	
-		if(isset($this->types[$as]) AND $this->types[$as] == "select") {
+		if(isset($this->types[$as]) AND ($this->types[$as] == "select" OR $this->types[$as] == "select-multiple")) {
 			if($this->onlyDisplayMode){
 				return $this->options[$as][array_search($this->attributes->$as,$this->values[$as])];
 			}
 			$s = "";
+			
+			$values = array($this->attributes->$as);
+			if($this->types[$as] == "select-multiple")
+				$values = trim($this->attributes->$as) != "" ? explode(";:;", $this->attributes->$as) : array();
 			
 			if(isset($this->optgroups[$as])) 
 				$s .= "<optgroup label=\"".strip_tags($this->optgroups[$as][$this->values[$as][0]])."\">";
@@ -740,12 +751,12 @@ class HTMLGUI implements icontextMenu {
 				if(isset($this->optgroups[$as]) AND $i > 0 AND $this->optgroups[$as][$this->values[$as][$i]] != $this->optgroups[$as][$this->values[$as][$i - 1]])
 					$s .= "</optgroup><optgroup label=\"".strip_tags($this->optgroups[$as][$this->values[$as][$i]])."\">";
 				
-				$s .= "<option value=\"".$this->values[$as][$i]."\" ".($this->values[$as][$i] == $this->attributes->$as ? " selected=\"selected\"" : "").">".$this->options[$as][$i]."</option>";
+				$s .= "<option value=\"".$this->values[$as][$i]."\" ".(in_array($this->values[$as][$i], $values) ? " selected=\"selected\"" : "").">".$this->options[$as][$i]."</option>";
 			}
 			
 			if(isset($this->optgroups[$as])) $s .= "</optgroup>";
 			
-			return (isset($this->buttonsNextToFields[$as]) ? $this->buttonsNextToFields[$as] : "")."<select onfocus=\"focusMe(this);\" onblur=\"blurMe(this);\"".(isset($this->events[$as]) ? $eve : "")." ".(isset($this->inputStyle[$as]) ? "style=\"".$this->inputStyle[$as]."\"" : "")." name=\"".$as."\" id=\"".$as."\">$s</select>";
+			return (isset($this->buttonsNextToFields[$as]) ? $this->buttonsNextToFields[$as] : "")."<select ".($this->types[$as] == "select-multiple" ? " multiple=\"multiple\"" : "")." onfocus=\"focusMe(this);\" onblur=\"blurMe(this);\"".(isset($this->events[$as]) ? $eve : "")." ".(isset($this->inputStyle[$as]) ? "style=\"".$this->inputStyle[$as]."\"" : "")." name=\"".$as."\" id=\"".$as."\">$s</select>";
 		}
 		
 		if(isset($this->types[$as]) AND $this->types[$as] == "checkbox") {
@@ -793,20 +804,37 @@ class HTMLGUI implements icontextMenu {
 		}
 		
 		if(isset($this->types[$as]) AND $this->types[$as] == "TextEditor") {
-			return "<input ".(isset($this->events[$as]) ? $eve : "")." style=\"background-image:url(./images/navi/editor.png);".(isset($this->inputStyle[$as]) ? "".$this->inputStyle[$as]."" : "")."\" type=\"button\" class=\"bigButton backgroundColor2\" onclick=\"TextEditor.show('$as','$this->FormID');\" value=\"".$this->texts["in Editor bearbeiten"]."\" /><textarea style=\"display:none;\" name=\"".$as."\" id=\"".$as."\">".$this->attributes->$as."</textarea>";
+			return "<input ".(isset($this->events[$as]) ? $eve : "")." style=\"background-image:url(./images/navi/editor.png);".(isset($this->inputStyle[$as]) ? "".$this->inputStyle[$as]."" : "")."\" type=\"button\" class=\"bigButton backgroundColor2\" onclick=\"TextEditor.show('$as','$this->FormID');\" value=\"".T::_("in Editor bearbeiten")."\" /><textarea style=\"display:none;\" name=\"".$as."\" id=\"".$as."\">".$this->attributes->$as."</textarea>";
 		}
 		
 		if(isset($this->types[$as]) AND $this->types[$as] == "HTMLEditor") {
-			$_SESSION["BPS"]->registerClass("WysiwygGUI");
+			
+			/*$BO = array("'{$this->options[0]}'", "'{$this->options[1]}'");
+			if(isset($this->options[2]))
+				$BO[] = "'{$this->options[2]}'";
+			if(isset($this->options[3]))
+				$BO[] = "'{$this->options[3]}'";*/
+
+			$B = new Button("in Editor\nbearbeiten","editor");
+			$B->doBefore("Overlay.showDark(); %AFTER");
+			$B->popup("", "Editor", "tinyMCE", "-1", "editInPopup", ["'$this->FormID'", "'$as'"], "", "Popup.presets.large");
+			$B->className("backgroundColor2");
+
+			$ITA = new HTMLInput($as, "hidden", $this->attributes->$as);
+
+			return $B->__toString().$ITA;
+				
+			//throw new Exception("HTMLEditor no longer supported!");
+			/*$_SESSION["BPS"]->registerClass("WysiwygGUI");
 			$_SESSION["BPS"]->setACProperty("FieldClass", get_class($this->object));
 			$_SESSION["BPS"]->setACProperty("FieldClassID",$this->editedID);
 			$_SESSION["BPS"]->setACProperty("FieldName",$as);
 			
-			return "<input ".(isset($this->events[$as]) ? $eve : "")." style=\"background-image:url(./images/navi/editor.png);".(isset($this->inputStyle[$as]) ? "".$this->inputStyle[$as]."" : "")."\" type=\"button\" class=\"bigButton backgroundColor2\" onclick=\"windowWithRme('Wysiwyg','','getEditor','');\" value=\"in HTML-Editor\nbearbeiten\" />";
+			return "<input ".(isset($this->events[$as]) ? $eve : "")." style=\"background-image:url(./images/navi/editor.png);".(isset($this->inputStyle[$as]) ? "".$this->inputStyle[$as]."" : "")."\" type=\"button\" class=\"bigButton backgroundColor2\" onclick=\"windowWithRme('Wysiwyg','','getEditor','');\" value=\"in HTML-Editor\nbearbeiten\" />";*/
 		}
 		
 		if(isset($this->types[$as]) AND $this->types[$as] == "TextEditor64") {
-			return "<input ".(isset($this->events[$as]) ? $eve : "")." style=\"background-image:url(./images/navi/editor.png);".(isset($this->inputStyle[$as]) ? "".$this->inputStyle[$as]."" : "")."\" type=\"button\" class=\"bigButton backgroundColor2\" onclick=\"TextEditor.show64('$as','$this->FormID');\" value=\"".$this->texts["in Editor bearbeiten"]."\" /><textarea style=\"display:none;\" name=\"".$as."\" id=\"".$as."\">".$this->attributes->$as."</textarea>";
+			return "<input ".(isset($this->events[$as]) ? $eve : "")." style=\"background-image:url(./images/navi/editor.png);".(isset($this->inputStyle[$as]) ? "".$this->inputStyle[$as]."" : "")."\" type=\"button\" class=\"bigButton backgroundColor2\" onclick=\"TextEditor.show64('$as','$this->FormID');\" value=\"".T::_("in Editor bearbeiten")."\" /><textarea style=\"display:none;\" name=\"".$as."\" id=\"".$as."\">".$this->attributes->$as."</textarea>";
 		}
 		
 		if(isset($this->types[$as]) AND $this->types[$as] == "readonly") {
@@ -823,20 +851,20 @@ class HTMLGUI implements icontextMenu {
 			#$_SESSION["BPS"]->setACProperty("id",$this->editedID);
 			#$_SESSION["BPS"]->setACProperty("attribute",$as);
 
-			if($this->editedID == -1) return $this->texts["zuerst speichern"];
+			if($this->editedID == -1) return T::_("zuerst speichern");
 			return "
 				<img 
 					src=\"./images/i2/settings.png\" 
 					style=\"float:right;\"
 					class=\"mouseoverFade\"
-					onclick=\"phynxContextMenu.start(this, 'HTML','upload:$this->editedID:".$this->classParentName.":".$as."','".$this->texts["Bild hochladen"].":','right');\" 
+					onclick=\"phynxContextMenu.start(this, 'HTML','upload:$this->editedID:".$this->classParentName.":".$as."','".T::_("Bild hochladen").":','right');\" 
 				/>
 				<img
 					src=\"./images/i2/delete.gif\"
 					style=\"float:right;margin-right:3px;\"
-					title=\"".$this->texts["Bild löschen"]."\"
+					title=\"".T::_("Bild löschen")."\"
 					class=\"mouseoverFade\"
-					onclick=\"if(confirm('".$this->texts["Bild wirklich löschen?"]."')) new Ajax.Request('./interface/set.php?class=".str_replace("Attributes","",get_class($this->attributes))."&id=$this->editedID&emptyAttribute=$as',{
+					onclick=\"if(confirm('".T::_("Bild wirklich löschen?")."')) new Ajax.Request('./interface/set.php?class=".str_replace("Attributes","",get_class($this->attributes))."&id=$this->editedID&emptyAttribute=$as',{
 						onSuccess: function(transport) { \$('uploadImage').style.display='none'; }
 					});\"
 				/>
@@ -852,7 +880,7 @@ class HTMLGUI implements icontextMenu {
 		if(isset($this->parsers[$as])) {
 			$r = "";
 			$m = explode("::", $this->parsers[$as]);
-			$r = Util::invokeStaticMethod($m[0], $m[1], array((isset($this->attributes->$as) ? $this->attributes->$as : ""), "", implode("%§%",$this->parserParameters[$as])));
+			$r = Util::invokeStaticMethod($m[0], $m[1], array((isset($this->attributes->$as) ? $this->attributes->$as : ""), $this->object, implode("%§%",$this->parserParameters[$as]), $this));
 			#return("\$r = ".$this->parsers[$as]."(\"".(isset($this->attributes->$as) ? $this->attributes->$as : "")."\",\"\",\"".implode("%§%",$this->parserParameters[$as])."\");");
 			return $r;
 		}
@@ -862,10 +890,10 @@ class HTMLGUI implements icontextMenu {
 	function getOperationsHTML($pluginName, $id = -1){
 		$userCanDelete = mUserdata::isDisallowedTo("cantDelete".$pluginName);
 		$userCanCreate = mUserdata::isDisallowedTo("cantCreate".$pluginName);
-		if($this->texts == null) {
-			$c = $this->loadLanguageClass("HTML");
-			$this->texts = $c->getEditTexts();
-		}
+		#if($this->texts == null) {
+			#$c = $this->loadLanguageClass("HTML");
+			#$this->texts = $c->getEditTexts();
+		#}
 
 		$html = "";
 		if(PMReflector::implementsInterface($pluginName,"iNewWithValues") AND $userCanCreate) $os = "1";
@@ -886,7 +914,7 @@ class HTMLGUI implements icontextMenu {
 		if($id != -1 AND $os != "00000"){
 			$B = new Button("Operationen", "wrench", "iconic");
 			$B->id($pluginName."Operations");
-			$B->onclick("phynxContextMenu.start(this, 'HTML','operations:$pluginName:$id:$os','".$this->texts["Operationen"].":');");
+			$B->onclick("phynxContextMenu.start(this, 'HTML','operations:$pluginName:$id:$os','".T::_("Operationen").":');");
 			$B->style("float:right;margin-top:-3px;");
 			
 			return $B;#"<span title=\"Operationen\" id=\"".$pluginName."Operations\" class=\"iconic wrench\" onclick=\"\" style=\"\" ></span>";
@@ -919,14 +947,15 @@ class HTMLGUI implements icontextMenu {
 		
 		$userHiddenFields = mUserdata::getHides($pluginName);
 		
-		$this->texts = $this->languageClass->getEditTexts();
+		#$this->texts = $this->languageClass->getEditTexts();
 
 		if(!$userCanEdit AND (($userCanCreate AND $this->editedID != -1) OR !$userCanCreate)){
 			$html .= "
-			<table>
-				<tr>
-					<td><img style=\"float:left;margin-right:10px;\" src=\"./images/navi/restrictions.png\" />".$this->texts["kein Speichern"]."</tr>
-			</table>";
+			<p class=\"highlight\">
+				".T::_("Dieser Eintrag kann nicht bearbeitet werden!")."
+			</p>";
+			
+			$this->setIsDisplayMode(true);
 		}
 
 		try {
@@ -949,7 +978,7 @@ class HTMLGUI implements icontextMenu {
 		$html .= "
 			<form id=\"$this->FormID\">
 				<div class=\"backgroundColor1 Tab\">
-					<p>".$this->getOperationsHTML($pluginName, $this->editedID)."".($this->labelCaption == null ? $this->name." editieren:" : $this->labelCaption)."</p>
+					<p>".$this->getOperationsHTML($pluginName, $this->editedID)."".($this->labelCaption == null ? T::_("%1 editieren", T::_($this->name)).":" : T::_($this->labelCaption))."</p>
 				</div>
 				<div>
 				<table>
@@ -981,7 +1010,7 @@ class HTMLGUI implements icontextMenu {
 					</tr>";
 				if($this->insertSpaceBefore[$value] != "" AND !$this->tabs[$value]) $html .= "
 					<tr class=\"FormSeparatorWithLabel\">
-						<td colspan=\"2\">".$this->insertSpaceBefore[$value]."</td>
+						<td colspan=\"2\">".T::_($this->insertSpaceBefore[$value])."</td>
 					</tr>";
 				elseif($this->insertSpaceBefore[$value] != "" AND $this->tabs[$value]) {
 					$html .= "
@@ -1007,8 +1036,8 @@ class HTMLGUI implements icontextMenu {
 			
 			$html .= "
 					<tr ".(isset($this->style[$value]) ? "style=\"".$this->style[$value]."\"" : "").">
-						<td id=\"".$value."EditL\"><label for=\"".$value."\">".$label.":".(isset($this->labelDescriptions[$value]) ? "<br /><small>".$this->labelDescriptions[$value]."</small>" : "")."</label></td>
-						<td id=\"".$value."EditR\">".$this->getInput($value)."".(isset($this->fieldDescriptions[$value]) ? "<br /><small style=\"color:grey;\">".$this->fieldDescriptions[$value]."</small>" : "")."</td>
+						<td id=\"".$value."EditL\"><label for=\"".$value."\">".T::_($label).":".(isset($this->labelDescriptions[$value]) ? "<br /><small>".$this->labelDescriptions[$value]."</small>" : "")."</label></td>
+						<td id=\"".$value."EditR\">".$this->getInput($value)."".(isset($this->fieldDescriptions[$value]) ? "<br /><small style=\"color:grey;\">".T::_($this->fieldDescriptions[$value], isset($this->fieldDescriptionsReplacement1[$value]) ? $this->fieldDescriptionsReplacement1[$value] : null)."</small>" : "")."</td>
 					</tr>";
 			
 		}
@@ -1029,7 +1058,7 @@ class HTMLGUI implements icontextMenu {
 							<input 
 								type=\"button\" 
 								name=\"currentSaveButton\"
-								value=\"".($this->labelSaveButton == null ? $this->name." speichern" : $this->labelSaveButton)."\" 
+								value=\"".($this->labelSaveButton == null ? T::_("%1 speichern", T::_($this->name)) : T::_($this->labelSaveButton))."\" 
 								onclick=\"".$this->saveButtonEvent."\" 
 								style=\"background-image:url(./images/i2/save.gif);\"
 							/>".$this->hiddenInputs."
@@ -1114,6 +1143,7 @@ class HTMLGUI implements icontextMenu {
 	 * @param int $lineWithId 
 	 */
 	function getBrowserHTML($lineWithId = -1){
+		T::load(Util::getRootPath()."libraries");
 		$string = "";
 		$top = "";
 		
@@ -1121,8 +1151,8 @@ class HTMLGUI implements icontextMenu {
 			foreach($this->prependedElements AS $E)
 				$top .= $E;
 		
-		$this->texts = $this->languageClass->getBrowserTexts();
-		$singularLanguageClass = $this->loadLanguageClass($this->singularClass);
+		#$this->texts = $this->languageClass->getBrowserTexts();
+		$singularLanguageClass = null;#$this->loadLanguageClass($this->singularClass);
 		
 		
 		
@@ -1164,6 +1194,7 @@ class HTMLGUI implements icontextMenu {
 		$oldValueForDisplayGroup = "";
 		#if($this->attributes != null)
 			#foreach($this->attributes AS $ei => $vi) {
+		if($this->attributes !== null)
 		for($i=0;$i < count($this->attributes);$i++){
 			#if($firstKey == null) $firstKey = $ei;
 			#$i = $ei;
@@ -1249,7 +1280,7 @@ class HTMLGUI implements icontextMenu {
 				}
 
 			if((!$this->onlyDisplayMode OR $this->deleteInDisplayMode) AND $userCanDelete)  $string .= "
-				<td><span class=\"mouseoverFade iconic trash_stroke\" onclick=\"deleteClass('".$this->singularClass."','$aid', ".($this->JSOnDelete == null ? "function() { /*$('BrowserMain".($this->onlyDisplayMode ? "D" : "")."$aid').style.display='none';*/ contentManager.reloadFrameRight(); if(typeof lastLoadedLeft != 'undefined' && lastLoadedLeft == '$aid') $('contentLeft').update(''); }" : $this->JSOnDelete).",'".str_replace("%1",$this->singularName, $this->texts["%1 wirklich löschen?"])."');\"></span></td>";
+				<td><span class=\"mouseoverFade iconic trash_stroke\" onclick=\"deleteClass('".$this->singularClass."','$aid', ".($this->JSOnDelete == null ? "function() { /*$('BrowserMain".($this->onlyDisplayMode ? "D" : "")."$aid').style.display='none';*/ contentManager.reloadFrameRight(); if(typeof lastLoadedLeft != 'undefined' && lastLoadedLeft == '$aid') $('contentLeft').update(''); }" : $this->JSOnDelete).",'".T::_("%1 wirklich löschen?", $this->singularName)."');\"></span></td>";
 			elseif(!$userCanDelete) $string .= "<td><img src=\"./images/i2/empty.png\" /></td>";
 			
 			if($this->editInDisplayMode AND $this->editInDisplayModeTarget != "contentLeft") $string .= "
@@ -1273,7 +1304,7 @@ class HTMLGUI implements icontextMenu {
 		foreach($this->shownCols as $key => $value)
 			$cols .= "<col class=\"backgroundColor".((++$c) % 2 + 2)." ".(isset($this->colClasses[$value]) ? $this->colClasses[$value] : "")."\" ".(isset($this->colStyles[$value]) ? "style=\"".$this->colStyles[$value]."\"" : "")." />\n";
 		
-		if(count($this->attributes) == 0) $cols .= "<col class=\"backgroundColor3\" />\n";
+		if($this->attributes !== null AND count($this->attributes) == 0) $cols .= "<col class=\"backgroundColor3\" />\n";
 		
 		if($this->onlyDisplayMode){
 			if($this->editInDisplayMode)
@@ -1312,16 +1343,18 @@ class HTMLGUI implements icontextMenu {
 			if($this->multiPageMode[1] != 0) $pageLinks .= "<a href=\"javascript:contentManager.loadFrame('".$this->multiPageMode[3]."','".$this->multiPageMode[4]."',-1,'".($this->multiPageMode[1]-1)."');\"><span class=\"iconic arrow_left\" style=\"margin-right:7px;\"></span></a> ";
 			else $pageLinks .= "<span class=\"iconic arrow_left inactive\" style=\"margin-right:7px;\"></span> ";
 			
-			if($this->multiPageMode[1] != $pages - 1) $pageLinks .= "<a href=\"javascript:contentManager.loadFrame('".$this->multiPageMode[3]."','".$this->multiPageMode[4]."',-1,'".($this->multiPageMode[1]+1)."');\"><span class=\"iconic arrow_right\" style=\"margin-left:7px;\"></span></a> ";
-			else $pageLinks .= "<span class=\"iconic arrow_right inactive\" style=\"margin-left:7px;\"></span> ";
+			if($this->multiPageMode[1] != $pages - 1) 
+				$pageLinks .= "<a href=\"javascript:contentManager.loadFrame('".$this->multiPageMode[3]."','".$this->multiPageMode[4]."',-1,'".(($this->multiPageMode[1] != "" ? $this->multiPageMode[1] : 0)+1)."');\"><span class=\"iconic arrow_right\" style=\"margin-left:7px;\"></span></a> ";
+			else 
+				$pageLinks .= "<span class=\"iconic arrow_right inactive\" style=\"margin-left:7px;\"></span> ";
 			
 			if($this->multiPageMode[1] != $pages - 1) $pageLinks .= "<a href=\"javascript:contentManager.loadFrame('".$this->multiPageMode[3]."','".$this->multiPageMode[4]."',-1,'".($pages-1)."');\"><span class=\"iconic arrow_right\" style=\"border-right-width:2px;\"></span></a> | ";
 			else $pageLinks .= "<span class=\"iconic arrow_right inactive\" style=\"border-right-width:2px;\"></span> | ";
 			
-			$start = $this->multiPageMode[1] - 3;
+			$start = ($this->multiPageMode[1] != "" ? $this->multiPageMode[1] : 0) - 3;
 			if($start < 0) $start = 0;
 			
-			$end = $this->multiPageMode[1] + 3;
+			$end = ($this->multiPageMode[1] != "" ? $this->multiPageMode[1] : 0) + 3;
 			if($end > $pages - 1) $end = $pages - 1;
 			
 			for($i=$start; $i<=$end; $i++)
@@ -1330,21 +1363,21 @@ class HTMLGUI implements icontextMenu {
 			
 				if($lineWithId == -1) $multiPageRow = "
 					<tr class=\"backgroundColorHeader\">
-						".($userDefinedEntriesPerPage ? "<td><span class=\"iconic wrench settingsButtonBrowser\" onclick=\"phynxContextMenu.start(this, 'HTML','multiPageSettings:{$this->multiPageMode[4]}','".$this->texts["Einstellungen"].":');\"></span></td>" : "")."
-						<td colspan=\"".($colspan+1+($userDefinedEntriesPerPage ? 0 : 1))."\"><!--<input type=\"text\"onkeydown=\"if(event.keyCode == 13) contentManager.loadFrame('".$this->multiPageMode[3]."','".$this->multiPageMode[4]."',-1,this.value - 1);\" style=\"width:30px;float:right;text-align:right;\" value=\"".($this->multiPageMode[1]+1)."\" onfocus=\"focusMe(this);\" onblur=\"blurMe(this);\" />-->".$this->multiPageMode[0]." ".($this->multiPageMode[0] == 1 ? $this->texts["Eintrag"] : $this->texts["Einträge"])."<!--, ".$pages." ".($pages != 1 ? $this->texts["Seiten"] : $this->texts["Seite"])."-->, ".($pages == 0 ? 1 : $pages)." ".(($pages == 0 ? 1 : $pages) != 1 ? $this->texts["Seiten"] : $this->texts["Seite"]).": $pageLinks</td>
+						".($userDefinedEntriesPerPage ? "<td><span class=\"iconic wrench settingsButtonBrowser\" onclick=\"phynxContextMenu.start(this, 'HTML','multiPageSettings:{$this->multiPageMode[4]}','".T::_("Einstellungen").":');\"></span></td>" : "")."
+						<td colspan=\"".($colspan+1+($userDefinedEntriesPerPage ? 0 : 1))."\"><!--<input type=\"text\"onkeydown=\"if(event.keyCode == 13) contentManager.loadFrame('".$this->multiPageMode[3]."','".$this->multiPageMode[4]."',-1,this.value - 1);\" style=\"width:30px;float:right;text-align:right;\" value=\"".(($this->multiPageMode[1] != "" ? $this->multiPageMode[1] : 0)+1)."\" onfocus=\"focusMe(this);\" onblur=\"blurMe(this);\" />-->".$this->multiPageMode[0]." ".($this->multiPageMode[0] == 1 ? T::_("Eintrag") : T::_("Einträge"))."<!--, ".$pages." ".($pages != 1 ? T::_("Seiten") : T::_("Seite"))."-->, ".($pages == 0 ? 1 : $pages)." ".(($pages == 0 ? 1 : $pages) != 1 ? T::_("Seiten") : T::_("Seite")).": $pageLinks</td>
 					</tr>";
 				
 					
 					
 				if($lineWithId == -1 AND $this->showFilteredCategoriesWarning AND isset($this->showFilteredCategoriesWarning[0]) AND $this->showFilteredCategoriesWarning[0] == true) {
 					#<img src=\"./images/i2/delete.gif\" style=\"float:right;\" class=\"mouseoverFade\" onclick=\"rme('mUserdata','','delUserdata',Array('filteredCategoriesInHTMLGUI{$this->showFilteredCategoriesWarning[1]}'),'contentManager.reloadFrameRight();');\" alt=\"".$this->texts["Filter löschen"]."\" title=\"".$this->texts["Filter löschen"]."\" />
-					$dB = new Button($this->texts["Filter löschen"],"./images/i2/delete.gif");
+					$dB = new Button("Filter löschen", "./images/i2/delete.gif");
 					$dB->style("float:right;");
 					$dB->type("icon");
 					$dB->rme("HTML","","saveContextMenu",array("'deleteFilters'","'{$this->showFilteredCategoriesWarning[1]}'"), "if(checkResponse(transport)) contentManager.reloadFrameRight();");
 					$filtered = "
 					<tr>
-						<td class=\"backgroundColor0\">".((isset($this->showFilteredCategoriesWarning[0]) AND $this->showFilteredCategoriesWarning[0] == true) ? "<img src=\"./images/i2/note.png\" /></td><td class=\"backgroundColor0\" colspan=\"".($determinedNumberofCols - 2)."\" style=\"color:grey;\" >".$this->texts["Anzeige wurde gefiltert"]."</td><td class=\"backgroundColor0\">$dB</td>" : " ")."</td>
+						<td class=\"backgroundColor0\">".((isset($this->showFilteredCategoriesWarning[0]) AND $this->showFilteredCategoriesWarning[0] == true) ? "<img src=\"./images/i2/note.png\" /></td><td class=\"backgroundColor0\" colspan=\"".($determinedNumberofCols - 2)."\" style=\"color:grey;\" >".T::_("Anzeige wurde gefiltert")."</td><td class=\"backgroundColor0\">$dB</td>" : " ")."</td>
 					</tr>";
 				}
 		}
@@ -1373,7 +1406,7 @@ class HTMLGUI implements icontextMenu {
 			
 			$quickSearchRow = "
 					<tr class=\"backgroundColorHeader\">
-						<td><span onclick=\"phynxContextMenu.start(this, '$this->quickSearchPlugin','searchHelp','".$this->texts["Suche"].":','left');\" class=\"iconic info\" style=\"cursor:help;\"></span></td>
+						<td><span onclick=\"phynxContextMenu.start(this, '$this->quickSearchPlugin','searchHelp','".T::_("Suche").":','left');\" class=\"iconic info\" style=\"cursor:help;\"></span></td>
 						<td colspan=\"".($colspan+1)."\">
 							$B
 							<input
@@ -1594,12 +1627,6 @@ class HTMLGUI implements icontextMenu {
 		$B->loadFrame($this->editInDisplayModeTarget, $this->singularClass, $aid, 0, "", $onSuccessFunction);
 
 		return "<td>$B</td>";
-		/*
-		 * <img
-			onclick=\"
-				".($this->editInDisplayModeTarget == "contentLeft" ? "lastLoadedLeft = $aid;lastLoadedLeftPlugin = '$this->singularClass';" : "")."
-				new Ajax.Request('./interface/loadFrame.php?p=".$this->singularClass."&id=$aid'".($this->JSOnEdit != null ? str_replace("%%VALUE%%","$aid",",{onSuccess: $this->JSOnEdit}") : ",{onSuccess: function(transport){ if(checkResponse(transport)) $('$this->editInDisplayModeTarget').update(transport.responseText); }}").");\" src=\"./images/i2/edit.png\" class=\"mouseoverFade\" />
-		 */
 	}
 	
 	public function getContextMenu($keysAndLabels, $saveTo, $identifier, $selectedKey, $onSuccessFunction = 'phynxContextMenu.stop();', $onClickFunction = ""){
@@ -1607,14 +1634,21 @@ class HTMLGUI implements icontextMenu {
 		$html = "
 		<table>";
 		foreach($keysAndLabels as $key => $label){
-			$action = "phynxContextMenu.saveSelection('$saveTo','$identifier','$key','".addslashes(stripslashes($onSuccessFunction))."');";
+			$action = "phynxContextMenu.saveSelection('$saveTo','$identifier','$key','". str_replace("%KEY", $key, addslashes(stripslashes($onSuccessFunction)))."');";
 
 			if($onClickFunction != "")
 				$action = str_replace("%VALUE", $key, $onClickFunction);
 
+			$replacement1 = null;
+			if(is_array($label)){
+				if(count($label))
+					$replacement1 = $label[1];
+				$label = $label[0];
+			}
+			
 			$html .= "
 			<tr onclick=\"$action\" id=\"cMEntry$key\" style=\"cursor:pointer;\" ".($selectedKey == $key ? "class=\"backgroundColor1\"" : "")." onmouseover=\"oldStyle = this.className;this.className='backgroundColor2';\" onmouseout=\"this.className=oldStyle;\">
-				<td>$label</td>
+				<td>".T::_($label, $replacement1)."</td>
 			</tr>";
 		}
 		$html .= "
@@ -1661,6 +1695,7 @@ class HTMLGUI implements icontextMenu {
 	 * Creates HTML for several global context menus
 	 */
 	public function getContextMenuHTML($identifier){
+		T::load(Util::getRootPath()."libraries");
 		
 		$s = explode(":",$identifier);
 		switch($s[0]){
@@ -1674,23 +1709,23 @@ class HTMLGUI implements icontextMenu {
 					$onDeleteQuestion = $c->getOnDeleteQuestion();
 				}
 
-				$texts = $this->languageClass->getEditTexts();
+				#$texts = $this->languageClass->getEditTexts();
 
 				#$BRepeatable = "";
 
 				$T = new HTMLTable(1);
 				
 				$Buttons = "";
-				if($s[3]{0} == "1"){
-					$B = new Button($texts["Neu mit Werten"], "new", "icon");
+				if($s[3][0] == "1"){
+					$B = new Button("Neu mit Werten", "new", "icon");
 					$B->onclick(OnEvent::reload("Left", "HTMLGUI;insertAsNew:true")/*"contentManager.reloadFrameLeft('HTMLGUI;insertAsNew:true');"*/);
 					$B->style("margin-right:10px;");
 					
 					$Buttons .= $B;
 				}
 				
-				if($s[3]{1} == "1"){
-					$B = new Button($texts["Kopieren"], "seiten", "icon");
+				if($s[3][1] == "1"){
+					$B = new Button("Kopieren", "seiten", "icon");
 					$B->rmePCR(str_replace("GUI", "", $s[1]), $s[2], 'cloneMe', "", "function(transport){ lastLoadedLeft = (transport.responseText == '' ? -1 : transport.responseText); contentManager.reloadFrameLeft(); contentManager.reloadFrameRight(); }");
 					#$B->onclick("rme('$s[1]','$s[2]','cloneMe','', 'lastLoadedLeft = (transport.responseText == \'\' ? -1 : transport.responseText); contentManager.reloadFrameLeft(); contentManager.reloadFrameRight();');");
 					$B->style("margin-right:10px;");
@@ -1698,24 +1733,24 @@ class HTMLGUI implements icontextMenu {
 					$Buttons .= $B;
 				}
 				
-				if($s[3]{2} == "1"){
-					$B = new Button($texts["Löschen"], "trash", "icon");
-					$B->onclick("deleteClass('".str_replace("GUI", "", $s[1])."','$s[2]',".($onDeleteEvent == "" ? "function() {  contentManager.reloadFrameRight(); if(typeof lastLoadedLeft != 'undefined' && lastLoadedLeft == '$s[2]') $('contentLeft').update(''); }" : $onDeleteEvent).",'".($onDeleteQuestion == "" ? $texts["Wirklich löschen?"] : $onDeleteQuestion)."');");
+				if($s[3][2] == "1"){
+					$B = new Button("Löschen", "trash", "icon");
+					$B->onclick("deleteClass('".str_replace("GUI", "", $s[1])."','$s[2]',".($onDeleteEvent == "" ? "function() {  contentManager.reloadFrameRight(); if(typeof lastLoadedLeft != 'undefined' && lastLoadedLeft == '$s[2]') $('contentLeft').update(''); }" : $onDeleteEvent).",'".($onDeleteQuestion == "" ? "Wirklich löschen?" : $onDeleteQuestion)."');");
 					$B->style("margin-right:10px;");
 					
 					$Buttons .= $B;
 				}
 				
-				if($s[3]{3} == "1"){
-					$BRepeatable = new Button($texts["Repeatable erstellen"],"redo");
+				if($s[3][3] == "1"){
+					$BRepeatable = new Button("Repeatable erstellen","redo");
 					$BRepeatable->type("icon");
 					$BRepeatable->onclick("contentManager.newClassButton('Repeatable','','contentLeft','RepeatableGUI;RepeatablePlugin:$s[1];RepeatablePluginElementID:$s[2]');");
 					
 					$Buttons .= $BRepeatable;
 				}
 				
-				if($s[3]{4} == "1"){
-					$B = new Button($texts["XML Export"], "export", "icon");
+				if($s[3][4] == "1"){
+					$B = new Button("XML Export", "export", "icon");
 					$B->onclick("windowWithRme('$s[1]', '$s[2]', 'getXML', '');phynxContextMenu.stop();");
 					$B->style("margin-right:10px;");
 					
@@ -1727,7 +1762,7 @@ class HTMLGUI implements icontextMenu {
 				
 				$T->addRowClass("backgroundColor0");
 						
-				echo $T."<p><small style=\"color:grey;\">Interne ID des Eintrags: $s[2]</small></p>";
+				echo $T."<p><small style=\"color:grey;\">".T::_("Interne ID des Eintrags").": $s[2]</small></p>";
 						
 				/*echo "
 				<table style=\"text-align:center;border:0px;\">
@@ -1742,14 +1777,19 @@ class HTMLGUI implements icontextMenu {
 			break;
 			
 			case "multiPageSettings":
-				$texts = $this->languageClass->getBrowserTexts();
+				$action = "contentManager.reloadFrame('contentRight');";
+				if(isset($s[2]))
+					$action = "contentManager.loadFrame('$s[2]', '$s[1]', -1, 0);";
+				$action = addslashes($action);
+				
+				#$texts = $this->languageClass->getBrowserTexts();
 				$mU = new mUserdata();
 				$entriesPerPage = $mU->getUDValue("entriesPerPage$s[1]");
 				if($entriesPerPage == null) $entriesPerPage = 20;
 				echo "
 				<table style=\"border:0px;\">
 					<tr>
-						<td class=\"backgroundColor3\">".$texts["Anzahl Einträge pro Seite"].":</td>
+						<td class=\"backgroundColor3\">".T::_("Anzahl Einträge pro Seite").":</td>
 					</tr>
 					<tr>
 						<td>
@@ -1757,7 +1797,7 @@ class HTMLGUI implements icontextMenu {
 								type=\"image\" 
 								src=\"./images/i2/save.gif\"
 								style=\"border: 0px none ; width: 18px;float:right;\" 
-								onclick=\"contentManager.rmePCR('HTML','', 'saveContextMenu', Array('multiPageSettings', '$s[1]:'+$('entriesPerPageCM').value), 'phynxContextMenu.stop(); contentManager.reloadFrame(\'".(!isset($s[2]) ? "contentRight" : $s[2])."\');');\" />
+								onclick=\"contentManager.rmePCR('HTML','', 'saveContextMenu', Array('multiPageSettings', '$s[1]:'+$('entriesPerPageCM').value), 'phynxContextMenu.stop(); $action');\" />
 						<input style=\"width:130px;text-align:right;\" id=\"entriesPerPageCM\" type=\"text\" value=\"$entriesPerPage\" /></td>
 					</tr>
 					<tr>
@@ -1773,17 +1813,24 @@ class HTMLGUI implements icontextMenu {
 					$mU = new mUserdata();
 					$HKs = $mU->getUDValue("OrderByFieldInHTMLGUI$s[1]");
 						
-					$selectForOrderByField = "<select onchange=\"rme('HTML','','saveContextMenu',Array('setOrderByField','$s[1];:;'+this.value),'if(checkResponse(transport)) { phynxContextMenu.stop(); contentManager.reloadFrameRight(); }');\"><option ".(($HKs == null OR $HKs == "default") ? "selected=\"selected\"" : "")." value=\"default\">Standard-Sortierung</option><optgroup label=\"aufsteigend\">";
+					$selectForOrderByField = "<select onchange=\"rme('HTML','','saveContextMenu',Array('setOrderByField','$s[1];:;'+this.value),'if(checkResponse(transport)) { phynxContextMenu.stop(); $action }');\"><option ".(($HKs == null OR $HKs == "default") ? "selected=\"selected\"" : "")." value=\"default\">Standard-Sortierung</option><optgroup label=\"aufsteigend\">";
 					$cFOBy = new $n();
 					$cFOBy = $cFOBy->getOrderByFields();
 					
-					foreach($cFOBy as $k => $v)
+					foreach($cFOBy AS $k => $v){
+						if(is_object($v))
+							$v = $v->label;
+						
 						$selectForOrderByField .= "<option ".($HKs == "$k;ASC" ? "selected=\"selected\"" : "")." value=\"$k;ASC\">".$v."</option>";
-					
+					}
 					$selectForOrderByField .= "</optgroup><optgroup label=\"absteigend\">";
 					
-					foreach($cFOBy as $k => $v)
+					foreach($cFOBy AS $k => $v){
+						if(is_object($v))
+							$v = $v->label;
+						
 						$selectForOrderByField .= "<option ".($HKs == "$k;DESC" ? "selected=\"selected\"" : "")." value=\"$k;DESC\">".$v."</option>";
+					}
 					
 					$selectForOrderByField .= "</optgroup></select>";
 					
@@ -1793,7 +1840,7 @@ class HTMLGUI implements icontextMenu {
 									<col />
 								</colgroup>
 								<tr>
-									<td class=\"backgroundColor3\">".$texts["nach Spalte sortieren"].":</td>
+									<td class=\"backgroundColor3\">".T::_("nach Spalte sortieren").":</td>
 								</tr>
 								<tr>
 									<td>$selectForOrderByField</td>
@@ -1829,7 +1876,7 @@ class HTMLGUI implements icontextMenu {
 									<col />
 								</colgroup>
 								<tr>
-									<td colspan=\"2\" class=\"backgroundColor3\">".$texts["nach Kategorien filtern"].":</td>
+									<td colspan=\"2\" class=\"backgroundColor3\">".T::_("nach Kategorien filtern").":</td>
 								</tr>
 							</table>
 							<div style=\"max-height:250px;overflow:auto;\">
@@ -1851,9 +1898,9 @@ class HTMLGUI implements icontextMenu {
 									<td colspan=\"2\" class=\"backgroundColor3\">
 										<input
 											type=\"button\" 
-											value=\"".$texts["speichern"]."\" 
+											value=\"".T::_("Speichern")."\" 
 											style=\"background-image:url(./images/i2/save.gif);\" 
-											onclick=\"contentManager.rmePCR('HTML','', 'saveContextMenu', Array('filterCategories', '$s[1]--'+joinFormFields('filterCatsOf$s[1]').replace(/\&/g,';').replace(/=/g,':')), 'phynxContextMenu.stop(); contentManager.reloadFrame(\'contentRight\', \'\', 0);');\" />
+											onclick=\"contentManager.rmePCR('HTML','', 'saveContextMenu', Array('filterCategories', '$s[1]--'+joinFormFields('filterCatsOf$s[1]').replace(/\&/g,';').replace(/=/g,':')), 'phynxContextMenu.stop(); $action');\" />
 									</td>
 								</tr>
 							</table>
@@ -1934,7 +1981,7 @@ class HTMLGUI implements icontextMenu {
 			break;
 			
 			case "setOrderByField":
-				$v = split(";:;",$key);
+				$v = explode(";:;",$key);
 				
 				$mU = new mUserdata();
 				if($v[1] != "default")
@@ -1951,6 +1998,9 @@ class HTMLGUI implements icontextMenu {
 				
 				$mU = new mUserdata();
 				$mU->delUserdata("searchFilterInHTMLGUI$key");
+				
+				$mU = new mUserdata();
+				$mU->delUserdata("searchFilterMulti$key");
 				
 				$mU = new mUserdata();
 				$mU->delUserdata("customFilterInHTMLGUI$key");
@@ -1972,12 +2022,12 @@ class HTMLGUI implements icontextMenu {
 	 * @param string $plugin
 	 */
 	public function VersionCheck($plugin){
-		$l = $this->languageClass->getBrowserTexts();
+		#$l = $this->languageClass->getBrowserTexts();
 
 		if(Util::versionCheck($_SESSION["applications"]->getRunningVersion(), $_SESSION["CurrentAppPlugins"]->getVersionOfPlugin($plugin) , "!=")){
 					
 			$t = new HTMLTable(1);
-			$t->addRow(str_replace(array("%1","%2"),array($_SESSION["CurrentAppPlugins"]->getVersionOfPlugin($plugin), $_SESSION["applications"]->getRunningVersion()),$l["versionError"]));
+			$t->addRow(str_replace(array("%1","%2"),array($_SESSION["CurrentAppPlugins"]->getVersionOfPlugin($plugin), $_SESSION["applications"]->getRunningVersion()),"Sie verwenden eine alte Version dieses Plugins (%1) mit einer neueren Version des Frameworks (%2).<br>Wenn Sie diese Anwendung aktualisiert haben, verwenden Sie bitte nachfolgenden Knopf, um sie neu zu laden."));
 			$t->addRow(Installation::getReloadButton());
 			die($t->getHTML());
 		}
@@ -2057,7 +2107,7 @@ class HTMLGUI implements icontextMenu {
 				else $pageLinks .= ($i+1)." ";
 		} else $pageLinks = "";
 
-		return "".($pages == 0 ? 1 : $pages)." ".(($pages == 0 ? 1 : $pages) != 1 ? $this->texts["Seiten"] : $this->texts["Seite"]).": ".$pageLinks;
+		return "".($pages == 0 ? 1 : $pages)." ".(($pages == 0 ? 1 : $pages) != 1 ? T::_("Seiten") : T::_("Seite")).": ".$pageLinks;
 	}
 	// </editor-fold>
 
@@ -2068,8 +2118,8 @@ class HTMLGUI implements icontextMenu {
 	 * @return Button
 	 */
 	protected function getPageOptionsButton(){
-		$BSettings = new Button($this->texts["Einstellungen"], "wrench", "iconic");
-		$BSettings->onclick("phynxContextMenu.start(this, 'HTML','multiPageSettings:{$this->multiPageMode[4]}:{$this->multiPageMode[3]}','".$this->texts["Einstellungen"].":');");
+		$BSettings = new Button("Einstellungen", "wrench", "iconic");
+		$BSettings->onclick("phynxContextMenu.start(this, 'HTML','multiPageSettings:{$this->multiPageMode[4]}:{$this->multiPageMode[3]}','".T::_("Einstellungen").":');");
 		#$BSettings->type("icon");
 		#$BSettings->className("settingsButtonBrowser");
 		
@@ -2086,7 +2136,6 @@ class HTMLGUI implements icontextMenu {
 	public function getPageSelectionField(){
 		$IPage = new HTMLInput("page", "text", $this->multiPageMode[1]+1);
 		$IPage->onkeyup("if(event.keyCode == 13 && this.value > 0) contentManager.loadPage('{$this->multiPageMode[3]}',this.value - 1);");
-		$IPage->hasFocusEvent(true);
 
 		return $IPage;
 	}
@@ -2098,9 +2147,9 @@ class HTMLGUI implements icontextMenu {
 
 			$B = "";
 			$K = "";
+			$D = "";
 			$showSF = PMReflector::implementsInterface($this->quickSearchPlugin."GUI","iSearchFilter");
 			if($showSF){
-				
 				$B = new Button("Suche als Filter anwenden","./images/i2/searchFilter.png", "icon");
 				$B->style("float:right;");
 				$B->rmePCR("HTML","","saveContextMenu", array("'searchFilter'","'$this->quickSearchPlugin;:;'+$('quickSearch$this->quickSearchPlugin').value"),"if(checkResponse(transport)) contentManager.reloadFrame('contentRight', '', 0);");
@@ -2109,8 +2158,25 @@ class HTMLGUI implements icontextMenu {
 				$K = $mU->getUDValue("searchFilterInHTMLGUI".$this->quickSearchPlugin);
 			}
 
+			$showSFM = PMReflector::implementsInterface($this->quickSearchPlugin."GUI","iSearchFilterMulti");
+			if($showSFM){
+				$B = new Button("Als Filter hinzufügen","./images/i2/searchFilter.png", "icon");
+				$B->style("float:right;");
+				$B->rmePCR("HTML","","searchFilterMultiAdd", array("'$this->quickSearchPlugin'", "\$j('#quickSearch$this->quickSearchPlugin').val()"),"if(checkResponse(transport)) contentManager.reloadFrame('contentRight', '', 0);");
+
+				$mU = new mUserdata();
+				$Q = $mU->getUDValue("searchFilterMulti".$this->quickSearchPlugin);
+				if($Q != ""){
+					$Qs = explode(";;", trim($Q, ";"));
+					
+					foreach($Qs AS $S){
+						$D .= "<span onclick=\"".OnEvent::rme(new HTMLGUI(), "searchFilterMultiRemove", array("'$this->quickSearchPlugin'", "'$S'"), OnEvent::reload("Right"))."\" style=\"cursor:pointer;padding:3px;display:inline-block;margin-right:5px;\" class=\"backgroundColor2\">$S ✕</span>";
+					}
+				}
+			}
+			
 			$BSearchInfo = new Button("","info","iconic");
-			$BSearchInfo->onclick("phynxContextMenu.start(this, '$this->quickSearchPlugin','searchHelp','".$this->texts["Suche"].":','left');");
+			$BSearchInfo->onclick("phynxContextMenu.start(this, '$this->quickSearchPlugin','searchHelp','".T::_("Suche").":','left');");
 			$BSearchInfo->style("cursor:help;");
 			#$BSearchInfo->type("icon");
 
@@ -2125,13 +2191,31 @@ class HTMLGUI implements icontextMenu {
 								placeholder=\"Suche\"
 								value=\"$K\"
 								".($showSF ? "style=\"width:90%;\"" : "")."
-							/>";
+							/>$D";
 			return array($quickSearchRow, $BSearchInfo);
 		}
 		return array("","");
 	}
 	// </editor-fold>
 
+	public function searchFilterMultiAdd($plugin, $query){
+		$n = "searchFilterMulti$plugin";
+		$old = mUserdata::getUDValueS($n, "");
+		$ex = explode(";;", trim($old));
+		if(count($ex) >= 5)
+			return;
+		
+		$mU = new mUserdata();
+		$mU->setUserdata($n, $old.";".$query.";");
+	}
+	
+	public function searchFilterMultiRemove($plugin, $query){
+		$n = "searchFilterMulti$plugin";
+
+		$mU = new mUserdata();
+		$mU->setUserdata($n, str_replace(";$query;", "", mUserdata::getUDValueS($n, "")));
+	}
+	
 	// <editor-fold defaultstate="collapsed" desc="getDesktopLinkSymbol">
 	/*public function getDesktopLinkButton(){
 		try {

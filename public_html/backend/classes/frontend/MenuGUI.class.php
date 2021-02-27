@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 	function  __construct() {
@@ -43,10 +43,16 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 		$newAppIco = Aspect::joinPoint("appLogo", $this, __METHOD__, array($_SESSION["applications"]->getActiveApplication()));
 		if($newAppIco != null) $appIco = $newAppIco;
 		// </editor-fold>
-
+		
+		try {
+			$layout = mUserdata::getUDValueS("phynxLayout", "horizontal");
+		} catch (Exception $e){
+			$layout = "horizontal";
+		}
+		
 		$appMenuHidden = "";
 		$appMenuDisplayed = "";
-		$appMenuActive = (!$_SESSION["S"]->isUserAdmin() AND (!isset($_COOKIE["phynx_layout"]) OR $_COOKIE["phynx_layout"] == "fixed" OR $_COOKIE["phynx_layout"] == "horizontal" OR $_COOKIE["phynx_layout"] == "desktop" OR $_COOKIE["phynx_layout"] == "vertical"));
+		$appMenuActive = (!$_SESSION["S"]->isUserAdmin() AND ($layout == "fixed" OR $layout == "horizontal" OR $layout == "desktop" OR $layout == "vertical"));
 
 		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
 		$aspectAppMenuActive = Aspect::joinPoint("appMenuActive", $this, __METHOD__);
@@ -57,18 +63,19 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 		
 		if($appIco != "") {
 			if(count($_SESSION["applications"]->getApplicationsList()) > 1 AND !$_SESSION["S"]->isAltUser())
-				echo "<img src=\"$appIco\" style=\"margin-left:10px;float:left;\" alt=\"Abmelden/Anwendung wechseln\" title=\"Abmelden/Anwendung wechseln\" onclick=\"".Environment::getS("onLogout", "phynxContextMenu.start(this, 'Menu','1','Anwendung wechseln:','right');")."\" />";
+				echo "<img src=\"$appIco\" id=\"appLogo\" style=\"margin-left:10px;float:left;\" alt=\"Abmelden/Anwendung wechseln\" title=\"Abmelden/Anwendung wechseln\" onclick=\"".Environment::getS("onLogout", "phynxContextMenu.start(this, 'Menu','1','Anwendung wechseln:','right');")."\" />";
 			else
-				echo "<img src=\"$appIco\" style=\"margin-left:10px;float:left;\" alt=\"Abmelden\" title=\"Abmelden\" onclick=\"".Environment::getS("onLogout", "userControl.doLogout();")."\" />";
+				echo "<img src=\"$appIco\" id=\"appLogo\" style=\"margin-left:10px;float:left;\" alt=\"Abmelden\" title=\"Abmelden\" onclick=\"".Environment::getS("onLogout", "userControl.doLogout();")."\" />";
 		}
 		
 
 		$bigWorld = false;
-		if(isset($_COOKIE["phynx_layout"]) AND ($_COOKIE["phynx_layout"] == "desktop" OR $_COOKIE["phynx_layout"] == "vertical"))
+		if($layout == "desktop" OR $layout == "vertical")
 			$bigWorld = true;
 		
 		if(!$_SESSION["S"]->isUserAdmin()) {
-			$userHiddenPlugins = mUserdata::getHiddenPlugins();
+			$userHiddenPlugins= mUserdata::getHiddenPlugins(true);
+			$userHiddenPlugins = Aspect::joinPoint("alterHidden", $this, __METHOD__, array($userHiddenPlugins), $userHiddenPlugins);
 			
 			$U = new mUserdata();
 			$U->addAssocV3("typ","=","TTP");
@@ -110,11 +117,14 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 		$collapsedTabs = Environment::getS("collapsedTabs", "0") == "1";
 		
 		foreach($es as $key => $value) {
-			if(isset($userHiddenPlugins[$value])) continue;
-			$single = $_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($value);
-			$anyC = new anyC();
-			$text = $anyC->loadLanguageClass($single);
-			if($text != null AND $text->getMenuEntry() != "") $key = $text->getMenuEntry();
+			if(isset($userHiddenPlugins[$value])) 
+				continue;
+
+			T::load(Util::getRootPath().Applications::activeApplication().DIRECTORY_SEPARATOR.AppPlugins::i()->getFolderOfPlugin($value), $value);
+			#$single = $_SESSION["CurrentAppPlugins"]->isCollectionOfFlip($value);
+			#$anyC = new anyC();
+			#$text = $anyC->loadLanguageClass($single);
+			#if($text != null AND $text->getMenuEntry() != "") $key = $text->getMenuEntry();
 			
 			$t =  !$_SESSION["S"]->isUserAdmin() ? $U->getUDValueCached("ToggleTab$value") : "big";
 
@@ -123,16 +133,18 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 
 			$key = Aspect::joinPoint("renameTab", $this, __METHOD__, array($key), $key);
 			
-			if(isset($_COOKIE["phynx_layout"]) AND ($_COOKIE["phynx_layout"] == "vertical" OR $_COOKIE["phynx_layout"] == "desktop")) $t = "big";
+			if($layout == "vertical" OR $layout == "desktop")
+				$t = "big";
 
 			#$emptyFrame = "contentLeft";
 			#if(isset($ts[$value]) AND $ts[$value] == "contentLeft") $emptyFrame = "contentRight";
 
-			#$onclick = "contentManager.emptyFrame('contentLeft'); contentManager.emptyFrame('contentRight'); contentManager.emptyFrame('contentScreen'); contentManager.loadFrame('".(isset($ts[$value]) ? $ts[$value] : "contentRight")."', '$value', -1, 0, '{$value}GUI;-');$('windows').update('');";
-			$onclick = "contentManager.loadPlugin('".(isset($ts[$value]) ? $ts[$value] : "contentRight")."', '$value', '{$value}GUI;-');";
+			$class = Aspect::joinPoint("alterClass", $this, __METHOD__, array($value), $value);
 			
-			$B = new Button($key,$icons[$value]);
-			$B->type("icon");
+			#$onclick = "contentManager.emptyFrame('contentLeft'); contentManager.emptyFrame('contentRight'); contentManager.emptyFrame('contentScreen'); contentManager.loadFrame('".(isset($ts[$value]) ? $ts[$value] : "contentRight")."', '$value', -1, 0, '{$value}GUI;-');$('windows').update('');";
+			$onclick = "contentManager.loadPlugin('".(isset($ts[$value]) ? $ts[$value] : "contentRight")."', '$class', '{$class}GUI;-');";
+			
+			$B = new Button($key,$icons[$value], "icon");
 			$B->style("float:left;margin-right:10px;");
 
 			$BM = new Button("Reihenfolge ändern","./images/i2/topdown.png");
@@ -150,7 +162,7 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 				<div
 					onclick=\"appMenu.hide(); $onclick\"
 				>
-				$B<p>$key</p>
+				$B<p>".T::_($key)."</p>
 				</div>
 			</li>";
 
@@ -169,31 +181,24 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 				$BP->className ("tabImg");
 			else
 				$BP->className ("smallTabImg");
-				
+			$BP->style("width:32px;height:32px;");
+			
+			$hideClass = "";
+			if(Session::isUserAdminS() AND Session::isInstallation() AND $value != "mInstallation" AND $value != "mWartung")
+				$hideClass = " installHiddenTab";
+			
+			
 			echo "
 				
 				<div
-					id=\"".$value."MenuEntry\"
-					class=\"navBackgroundColor navBorderColor ".(($t == null OR $t == "big") ? "" : " smallTab")." navTab\"
+					id=\"".$class."MenuEntry\"
+					class=\"navBackgroundColor navBorderColor ".(($t == null OR $t == "big") ? "" : " smallTab")." navTab$hideClass\"
 					$style
 					>
-					<!--<img
-						style=\"margin-top:-28px;float:left;\"
-						id=\"".$value."TabMinimizer\"
-						class=\"navTabMinimizer\"
-						title=\"Tab $key vergrößern/verkleinern\"
-						onclick=\"toggleTab('$value');\"
-						src=\"./images/i2/tabMinimize.png\" />-->
 					
 					<div onclick=\"$onclick\" style=\"padding:3px;padding-right:7px;padding-top:7px;height:18px;\">
 						$BP
-						<!--<img
-							id=\"".$value."MenuImage\"
-							title=\"$key\"
-							".(($t == null OR $t == "big") ? "class=\"tabImg\"" : "class=\"smallTabImg\"")."
-							src=\"$icons[$value]\" />-->
-							
-						".(($t == null OR $t == "big") ? $key : "")."
+						".(($t == null OR $t == "big") ? T::_($key) : "")."
 					</div>
 				</div>";
 		}
@@ -213,7 +218,7 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 			$ud = new mUserdata();
 			$al = $ud->getUDValue("noAutoLogout","false");
 			
-			if($al == "true") echo "<script type=\"text/javascript\">contentManager.startAutoLogoutInhibitor();</script>";
+			if($al == "true") echo "<script type=\"text/javascript\">contentManager.startAutoLogoutInhibitor(".(file_exists(Util::getRootPath()."plugins/AppServer/index.php") ? "1" : "0").");</script>";
 		}
 		
 		echo OnEvent::script("contentManager.isAltUser = ".(Session::isAltUserS() ? "true" : "false").";");
@@ -227,7 +232,7 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 			$ex = explode("_", $U->A("language"));
 			if(isset($ex[2]))
 				unset($ex[2]);
-			echo "<script type=\"text/javascript\">\$j.datepicker.setDefaults(\$j.datepicker.regional['".  implode("_", $ex)."']); ".(Session::physion() ? "\$j('#navigation').hide();" : "")."</script>";
+			echo "<script type=\"text/javascript\">Interface.application = '".Applications::activeApplication()."'; Interface.locale = '".implode("_", $ex)."'; \$j.datepicker.setDefaults(\$j.datepicker.regional['".implode("_", $ex)."']); ".(Session::physion() ? "\$j('#navigation').hide();" : "")."</script>";
 		} catch (Exception $e){ }
 	}
 
@@ -350,7 +355,7 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 			$U->setUserdata("ToggleTab$plugin","big","TTP");
 	}
 	
-	public function getActiveApplicationName(){
+	public function getActiveApplicationName($return = false){
 		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
 		try {
 			$MArgs = func_get_args();
@@ -358,15 +363,21 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 		} catch (AOPNoAdviceException $e) {}
 		Aspect::joinPoint("before", $this, __METHOD__, $MArgs);
 		// </editor-fold>
-		$name = Applications::activeApplication();
-		echo Environment::getS("renameApplication:$name", $name." ".Applications::activeVersion());
+		
+		$name = Applications::activeApplicationLabel();
+		$n = Environment::getS("renameApplication:$name", $name)." ".Applications::activeVersion();
+		
+		if($return)
+			return $n;
+		
+		echo $n;
 	}
 	
 	public function getContextMenuHTML($identifier){
 		$sk = Applications::activeApplication();#$_SESSION["applications"]->getActiveApplication();
 		$kal = Applications::getList();#$_SESSION["applications"]->getApplicationsList();
 		$kal = array_flip($kal);
-
+		natcasesort($kal);
 		#print_r($kal);
 		#foreach($kal as $k => $v)
 		#	$kal[$k] = $k;
@@ -381,7 +392,7 @@ class MenuGUI extends UnpersistentClass implements iGUIHTML2, icontextMenu {
 		}
 			
 		$gui = new HTMLGUI();
-		echo "<div style=\"max-height:400px;overflow:auto;\">".$gui->getContextMenu($kal, 'Menu','1',$sk,'phynxContextMenu.stop(); contentManager.switchApplication();')."</div>";
+		echo "<div style=\"max-height:400px;overflow:auto;\">".$gui->getContextMenu($kal, 'Menu','1',$sk,'phynxContextMenu.stop(); contentManager.switchApplication(\'%KEY\', true);')."</div>";
 		echo "<div class=\"backgroundColor1\" id=\"cMLogout\" onclick=\"userControl.doLogout();\" onmouseover=\"this.className='backgroundColor3';\" onmouseout=\"this.className='backgroundColor1';\" style=\"padding:5px;cursor:pointer;\"><img style=\"float:left;\" title=\"Abmelden\" src=\"./images/i2/logout.png\" onclick=\"userControl.doLogout();\" /><p style=\"padding-top:7px;padding-bottom:7px;padding-left:50px;\"><b>Abmelden</b></p></div>";
 	}
 

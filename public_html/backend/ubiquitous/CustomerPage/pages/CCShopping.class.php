@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class CCShopping implements iCustomContent {
 	function getLabel(){
@@ -25,6 +25,14 @@ class CCShopping implements iCustomContent {
 	function getTitle(){
 		return "Einkaufsliste";
 	}
+	
+	public function getApps(){
+		return [];
+	}
+	
+	#function getViewport(){
+	#	return "width=1000, initial-scale=1";
+	#}
 	
 	function getCMSHTML() {
 		$key = substr(Util::eK(), 0, 5);
@@ -41,6 +49,8 @@ class CCShopping implements iCustomContent {
 		 */
 		$AC = anyC::get("Einkaufszettel");
 		$AC->addAssocV3("EinkaufszettelBought", "=", "0");
+		$AC->addJoinV3("EinkaufszettelKategorie", "EinkaufszettelEinkaufszettelKategorieID", "=", "EinkaufszettelKategorieID");
+		$AC->addOrderV3("EinkaufszettelKategorieName");
 		$AC->addOrderV3("EinkaufszettelName");
 		
 		$html = "<style type=\"text/css\">
@@ -49,6 +59,12 @@ class CCShopping implements iCustomContent {
 					margin-top:10px;
 				}
 				
+				@media only screen and (max-width: 360px) {
+					html {
+						zoom: .8;
+					}
+				}
+				  
 				.entry {
 					padding:10px;
 					border-top-width:1px;
@@ -65,6 +81,8 @@ class CCShopping implements iCustomContent {
 					-ms-user-select: none;
 					user-select: none;
 					-webkit-tap-highlight-color:rgba(255,255,255,0);
+					width:100%;
+					box-sizing:border-box;
 				}
 				
 				.entryRestore {
@@ -84,6 +102,8 @@ class CCShopping implements iCustomContent {
 					user-select: none;
 					color:#444;
 					-webkit-tap-highlight-color:rgba(255,255,255,0);
+					width:100%;
+					box-sizing:border-box;
 				}
 				
 				.backgroundColor4 {
@@ -102,34 +122,74 @@ class CCShopping implements iCustomContent {
 		
 		$B = new Button("Wiederherstellen", "undo", "iconicL");
 		
+		$last = null;
 		while($E = $AC->getNextEntry()){
+			if($last != $E->A("EinkaufszettelKategorieName") AND $last !== null){
+				$html .= "<h1 style=\"padding-left:10px;padding-top:15px;padding-bottom:7px;\">".$E->A("EinkaufszettelKategorieName")."</h1>";
+			}
+			
 			$html .= "
 				<div
 					id=\"entry".$E->getID()."\"
-					ontouchend=\"CustomerPage.rme('setBought', [".$E->getID()."], function(){ $('#entry".$E->getID()."').hide(); $('#restoreEntry".$E->getID()."').show(); $('#emptyEntry').hide(); if($('#einkaufsliste .nonEmpty').length == 0) $('#emptyEntry').show(); });\"
+					ontouchend=\"if(Touch.cancelNext) return;  CustomerPage.rme('setBought', [".$E->getID()."], function(){ $('#entry".$E->getID()."').hide(); $('#restoreEntry".$E->getID()."').show(); $('#emptyEntry').hide(); if($('#einkaufsliste .nonEmpty').length == 0) $('#emptyEntry').show(); });\"
 					class=\"nonEmpty entry backgroundColor1 borderColor1\">
 					
-					".($E->A("EinkaufszettelMenge") > 1 ? $E->A("EinkaufszettelMenge")." x " : "").$E->A("EinkaufszettelName").($E->A("EinkaufszettelNameDetails") != "" ? "<br /><small style=\"color:grey;\">".$E->A("EinkaufszettelNameDetails")."</small>" : "")."
+					".($E->A("EinkaufszettelMenge") > 1 ? $E->A("EinkaufszettelMenge")." " : "").$E->A("EinkaufszettelName").($E->A("EinkaufszettelNameDetails") != "" ? "<br /><small style=\"color:grey;\">".$E->A("EinkaufszettelNameDetails")."</small>" : "")."
 				</div>
 				<div 
 					class=\"nonEmpty entryRestore backgroundColor4 borderColor0\"
-					ontouchend=\"CustomerPage.rme('setUnBought', [".$E->getID()."], function(){ $('#entry".$E->getID()."').show(); $('#restoreEntry".$E->getID()."').hide(); $('#emptyEntry').hide(); if($('#einkaufsliste .nonEmpty').length == 0) $('#emptyEntry').show(); });\"
+					ontouchend=\"if(Touch.cancelNext) return; CustomerPage.rme('setUnBought', [".$E->getID()."], function(){ $('#entry".$E->getID()."').show(); $('#restoreEntry".$E->getID()."').hide(); $('#emptyEntry').hide(); if($('#einkaufsliste .nonEmpty').length == 0) $('#emptyEntry').show(); });\"
 					id=\"restoreEntry".$E->getID()."\" style=\"display:none;\">".$E->A("EinkaufszettelName")." $B</div>";
+			
+			$last = $E->A("EinkaufszettelKategorieName");
 		}
 		
 		$html .= "<div style=\"".($AC->numLoaded() == 0 ? "" : "display:none;")."\" class=\"entry backgroundColor1 borderColor1\" id=\"emptyEntry\">Die Einkaufsliste enthält keine Einträge.<br /><small style=\"color:grey;\">".Util::CLDateParser(time())."</small></div>";
 		
 		$html .= "</div>";
 		
-		return $html.OnEvent::script("$('.entry, .entryRestore').bind('touchstart mousedown', function(){ $(this).addClass('entryTouch'); }); $('.entry, .entryRestore').bind('touchend mouseup', function(){ $(this).removeClass('entryTouch'); });");
+		return $html.OnEvent::script("
+		var Touch = {};
+		
+		$(document).on('touchstart mousedown', '[ontouchend]', function(ev){
+			$(this).addClass('entryTouch'); 
+			
+			Touch.startPos = [ev.clientX, ev.clientY];
+			Touch.cancelNext = false;
+			Touch.inAction = this;
+		
+		}); 
+		
+		$(document).on('touchend mouseup', '[ontouchend]', function(ev){
+			$(this).removeClass('entryTouch');
+			Touch.inAction = false;
+		});
+			
+		$(document).on('touchmove mousemove', '[ontouchend]', function(ev){
+			if(!Touch.inAction)
+				return;
+
+			if(Math.abs(ev.clientX - Touch.startPos[0]) < 15 && Math.abs(ev.clientY - Touch.startPos[1]) < 15)
+				return;
+
+			Touch.cancelNext = true;
+			$('.entryTouch').removeClass('entryTouch');
+			
+			//$(ev.target).trigger('touchend');
+		});
+	");
 	}
 	
 	public static function setBought($args){
+		registerClassPath("Einkaufszettel", Util::getRootPath()."fheME/Einkaufszettel/Einkaufszettel.class.php");
+		
 		$E = new Einkaufszettel($args["P0"]);
 		$E->setBought();
 	}
 	
 	public static function setUnBought($args){
+		registerClassPath("Einkaufszettel", Util::getRootPath()."fheME/Einkaufszettel/Einkaufszettel.class.php");
+		
 		$E = new Einkaufszettel($args["P0"]);
 		$E->setUnBought();
 	}

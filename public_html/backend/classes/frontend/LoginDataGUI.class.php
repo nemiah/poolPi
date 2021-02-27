@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class LoginDataGUI extends LoginData implements iGUIHTML2 {
 	function getHTML($id){
@@ -48,14 +48,15 @@ class LoginDataGUI extends LoginData implements iGUIHTML2 {
 		$gui->type("typ", "hidden");
 		$gui->type("wert", "hidden");
 		$gui->type("passwort", "password");
+		$gui->type("optionen2", "hidden");
 
 
-
-		$onkeyup = "$('editLoginDataGUI').wert.value = $('editLoginDataGUI').benutzername.value+'::::'+$('editLoginDataGUI').passwort.value+($('editLoginDataGUI').server.value != '' ? '::::s:'+$('editLoginDataGUI').server.value : '')+($('editLoginDataGUI').optionen.value != '' ? '::::o:'+$('editLoginDataGUI').optionen.value : '')";
+		$onkeyup = "$('editLoginDataGUI').wert.value = $('editLoginDataGUI').benutzername.value+'::::'+$('editLoginDataGUI').passwort.value+($('editLoginDataGUI').server.value != '' ? '::::s:'+$('editLoginDataGUI').server.value : '')+($('editLoginDataGUI').optionen.value != '' ? '::::o:'+$('editLoginDataGUI').optionen.value : '')+($('editLoginDataGUI').optionen2.value != '' ? '::::2:'+$('editLoginDataGUI').optionen2.value : '')";
 		$gui->addFieldEvent("benutzername", "onKeyup", $onkeyup);
 		$gui->addFieldEvent("server", "onKeyup", $onkeyup);
 		$gui->addFieldEvent("passwort", "onKeyup", $onkeyup);
 		$gui->addFieldEvent("optionen", "onKeyup", $onkeyup);
+		$gui->addFieldEvent("optionen2", "onKeyup", $onkeyup);
 
 
 		$U = new Users();
@@ -199,6 +200,22 @@ class LoginDataGUI extends LoginData implements iGUIHTML2 {
 			$onSave .= OnEvent::reloadPopup("mVUser");
 		}
 		
+		if($bps != -1 AND isset($bps["preset"]) AND $bps["preset"] == "klickTippAPI"){
+			$gui->type("UserID", "hidden");
+			$this->changeA("UserID", "-1");
+
+			$gui->type("name", "hidden");
+			$this->changeA("name", "KlickTippAPIData");
+
+			$gui->type("optionen", "hidden");
+			#$gui->type("passwort", "hidden");
+			#$gui->type("server", "hidden");
+			
+			$gui->label("server", "API key");
+			
+			$onSave .= OnEvent::reloadPopup("mKlickTipp");
+		}
+		
 		if($bps != -1 AND isset($bps["preset"]) AND $bps["preset"] == "backupFTPServer"){
 			$BAbort = new Button("Abbrechen", "stop");
 			$BAbort->onclick("Popup.close('LoginData', 'edit');");
@@ -211,6 +228,24 @@ class LoginDataGUI extends LoginData implements iGUIHTML2 {
 
 			$gui->type("name", "hidden");
 			$this->changeA("name", "BackupFTPServerUserPass");
+
+			$gui->descriptionField("optionen", "Bitte geben Sie hier das Unterverzeichnis an, in das die Datei hochgeladen werden soll");
+			$gui->label("optionen", "Verzeichnis");
+			#$gui->type("optionen", "hidden");
+		}
+		
+		if($bps != -1 AND isset($bps["preset"]) AND $bps["preset"] == "backupFTPsServer"){
+			$BAbort = new Button("Abbrechen", "stop");
+			$BAbort->onclick("Popup.close('LoginData', 'edit');");
+			$BAbort->style("float:right;");
+			
+			$html = "<p style=\"padding:5px;\">{$BAbort}<small>Sie müssen hier nur Einstellungen vornehmen, wenn Sie die Backups automatisch auf einen FTPs-Server hochladen möchten.</small></p>";
+
+			$gui->type("UserID", "hidden");
+			$this->changeA("UserID", "-1");
+
+			$gui->type("name", "hidden");
+			$this->changeA("name", "BackupFTPsServerUserPass");
 
 			$gui->descriptionField("optionen", "Bitte geben Sie hier das Unterverzeichnis an, in das die Datei hochgeladen werden soll");
 			$gui->label("optionen", "Verzeichnis");
@@ -277,6 +312,22 @@ class LoginDataGUI extends LoginData implements iGUIHTML2 {
 			$gui->type("server", "hidden");
 			$gui->type("passwort", "hidden");
 		}
+
+		if($bps != -1 AND isset($bps["preset"]) AND $bps["preset"] == "P.meIDAndPIN"){
+
+			$html = "";
+			
+			$gui->type("UserID", "hidden");
+			$this->changeA("UserID", "-1");
+			$gui->label("benutzername", "CustomerID");
+			$gui->type("name", "hidden");
+			$gui->label("passwort", "PIN");
+			$this->changeA("name", "P.meIDAndPIN");
+			$gui->type("optionen", "hidden");
+			$gui->type("server", "hidden");
+			
+			$onSave = OnEvent::reload("Screen").OnEvent::closePopup("LoginData");
+		}
 		
 		if($bps != -1 AND isset($bps["preset"]) AND $bps["preset"] == "adServer"){
 
@@ -291,13 +342,15 @@ class LoginDataGUI extends LoginData implements iGUIHTML2 {
 			$gui->type("passwort", "hidden");*/
 			$gui->type("name", "hidden");
 			$gui->type("UserID", "hidden");
+			$gui->type("optionen2", "text");
 			
 			$gui->label("server", "AD-Server");
 			$gui->label("optionen", "Benutzer-Pfad");
+			$gui->label("optionen2", "Nur Gruppe");
 			
 			$gui->descriptionField("benutzername", "Mit Domain-Name. Z.B. Administator@Furtmeier.dom");
 			$gui->descriptionField("optionen", "Bitte geben Sie den LDAP-Pfad zum Benutzer-Verzeichnis ein. Z.B. OU=Benutzer,DC=furtmeier,DC=dom");
-			
+			$gui->descriptionField("optionen2", "Bitte geben Sie die LDAP-Gruppe ein, deren Mitglied ein Benutzer sein muss. Z.B. CN=ERP,OU=Globale Zugriffsgruppen,DC=furtmeier,DC=dom");
 			$onSave = "Popup.close('Users', 'edit');";
 		}
 

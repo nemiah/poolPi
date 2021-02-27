@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 
 /*
@@ -121,18 +121,6 @@
 	});
 })(jQuery);
 
-/*
- Color animation 20120928
- http://www.bitstorm.org/jquery/color-animation/
- Copyright 2011, 2012 Edwin Martin <edwin@bitstorm.org>
- Released under the MIT and GPL licenses.
-*/
-/*(function(d){function m(){var b=d("script:first"),a=b.css("color"),c=false;if(/^rgba/.test(a))c=true;else try{c=a!=b.css("color","rgba(0, 0, 0, 0.5)").css("color");b.css("color",a)}catch(e){}return c}function j(b,a,c){var e="rgb"+(d.support.rgba?"a":"")+"("+parseInt(b[0]+c*(a[0]-b[0]),10)+","+parseInt(b[1]+c*(a[1]-b[1]),10)+","+parseInt(b[2]+c*(a[2]-b[2]),10);if(d.support.rgba)e+=","+(b&&a?parseFloat(b[3]+c*(a[3]-b[3])):1);e+=")";return e}function g(b){var a,c;if(a=/#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})/.exec(b))c=
-[parseInt(a[1],16),parseInt(a[2],16),parseInt(a[3],16),1];else if(a=/#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])/.exec(b))c=[parseInt(a[1],16)*17,parseInt(a[2],16)*17,parseInt(a[3],16)*17,1];else if(a=/rgb\(\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*\)/.exec(b))c=[parseInt(a[1]),parseInt(a[2]),parseInt(a[3]),1];else if(a=/rgba\(\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9\.]*)\s*\)/.exec(b))c=[parseInt(a[1],10),parseInt(a[2],10),parseInt(a[3],10),parseFloat(a[4])];return c}
-d.extend(true,d,{support:{rgba:m()}});var k=["color","backgroundColor","borderBottomColor","borderLeftColor","borderRightColor","borderTopColor","outlineColor"];d.each(k,function(b,a){d.Tween.propHooks[a]={get:function(c){return d(c.elem).css(a)},set:function(c){var e=c.elem.style,i=g(d(c.elem).css(a)),h=g(c.end);c.run=function(f){e[a]=j(i,h,f)}}}});d.Tween.propHooks.borderColor={set:function(b){var a=b.elem.style,c=[],e=k.slice(2,6);d.each(e,function(h,f){c[f]=g(d(b.elem).css(f))});var i=g(b.end);
-b.run=function(h){d.each(e,function(f,l){a[l]=j(c[l],i,h)})}}}})(jQuery);
-*/
-
 (function($) {
 	$.fn.extend({
 		insertAtCaret: function(myValue){
@@ -162,7 +150,6 @@ b.run=function(h){d.each(e,function(f,l){a[l]=j(c[l],i,h)})}}}})(jQuery);
 		}
 	});
 })(jQuery);
-
 
 
 var $j = jQuery.noConflict();
@@ -195,7 +182,15 @@ var P2J = {
 			element = "#"+element;
 		
 		return element;
-	}
+	},
+	
+	sortableOffsetFix: function(event, ui){
+		var $target = $j(event.target);
+		if (!/html|body/i.test($target.offsetParent()[0].tagName)) {
+			var top = event.pageY - $target.offsetParent().offset().top - (ui.helper.outerHeight(true) / 2);
+			ui.helper.css({'top' : top + 'px'});
+		}
+	},
 };
 
 String.prototype.makeHTML = function() {
@@ -227,11 +222,62 @@ function $$(something){
 	return $j(something);
 }
 
-function PeriodicalExecuter(callback, delayInSeconds) {
+/*function PeriodicalExecuter(callback, delayInSeconds) {
 	window.setInterval(function(){
 		callback();
 	}, delayInSeconds * 1000);
-}
+}*/
+
+pow = {
+	socket: null,
+	reconnect: null,
+	onopen: [],
+	start: function (websocketServerLocation){
+		pow.socket = new WebSocket(websocketServerLocation);
+		pow.socket.onmessage = function(event) { 
+			console.log("message…");
+			console.log(JSON.parse(event.data));
+		};
+		
+		pow.onopen.push(function(){
+			if(pow.reconnect === null)
+				return;
+			
+			clearInterval(pow.reconnect);
+			pow.reconnect = null;
+		});
+		
+		pow.socket.onopen = function(event){
+			console.log("open!");
+			while((element = pow.onopen.shift())){
+				console.log(element);
+			}
+			//pow.onopen.forEach(element => element(event));
+		};
+		
+		pow.socket.onclose = function(){
+			pow.reconnect = setTimeout(function(){
+				pow.start(websocketServerLocation);
+			}, 1000);
+		};
+	},
+	
+	send: function(data){
+		var jsonString = JSON.stringify(data);
+		
+		if(pow.socket.readyState === 0)
+			pow.onopen.push(function(){
+			  pow.socket.send(jsonString);
+			});
+		
+		if(pow.socket.readyState === 1)
+			 pow.socket.send(jsonString);
+		
+	}
+};
+
+pow.start('ws://localhost:8080');
+
 
 var Ajax = {
 	physion: "default",
@@ -240,13 +286,17 @@ var Ajax = {
 	lastRequest: null,
 	lastRequestTime: Date.now(),
 	
+	lastRequests: [],
+	
 	Request: function(anurl, options){
 		Ajax.counter++;
 		Ajax.lastRequest = options.parameters;
 		Ajax.lastRequestTime = Date.now();
 		var counter = Ajax.counter;
 		var start;
-		$j.ajax({
+		
+		var data = {
+			counter: Ajax.counter,
 			url: anurl+(Ajax.physion != "default" ? (anurl.indexOf("?") > -1 ? "&": "?")+"physion="+Ajax.physion : ""),
 			//timeout: 10000,
 			beforeSend: function(){
@@ -258,6 +308,7 @@ var Ajax = {
 				if(window.console && request.getResponseHeader('X-Timers')){
 					var obj = jQuery.parseJSON(request.getResponseHeader('X-Timers'));
 					console.log(counter+": Timers");
+					var previous = 0;
 					$j.each(obj, function(k, v){
 						while(v[1].length < 6)
 							v[1] = " "+v[1];
@@ -266,7 +317,11 @@ var Ajax = {
 						while(v[0].length < 8)
 							v[0] = v[0]+" ";
 						
-						console.log("%c "+v[0]+" "+v[1]+" ("+v[2]+":"+v[3]+")", "color:grey;");
+						if(parseInt(v[1]) - previous > 30)
+							console.warn("%c "+v[0]+" "+v[1]+" ("+v[2]+":"+v[3]+")", "color:grey;");
+						else
+							console.log("%c "+v[0]+" "+v[1]+" ("+v[2]+":"+v[3]+")", "color:grey;");
+						previous = parseInt(v[1]);
 					});
 					console.log(" total:    "+duration+"ms");
 				}
@@ -286,10 +341,22 @@ var Ajax = {
 				};
 				options.onSuccess(t, textStatus, request); 
 			},
+			error: function(par1, par2, par3){
+				if(typeof options.onError === "function")
+					options.onError(par1, par2, par3);
+				
+				Popup.load("Fehler", "Support", -1, "fatalError", [par1.status+" "+par3+" ("+par2+")", Ajax.lastRequest+""], "", "edit", "{width: 600, blackout: true, hPosition: 'center', top:30}");
+			},
 			type: options.method ? options.method : "GET",
 			data: options.parameters ? options.parameters : null,
 			cache : false
-		});
+		};
+		
+		Ajax.lastRequests[Ajax.counter] = data;
+		
+		pow.send(data);
+		
+		$j.ajax(data);
 	},
 	
 	Responders: {
@@ -298,10 +365,6 @@ var Ajax = {
 			$j(document).ajaxSuccess(options.onComplete);
 			$j(document).ajaxError(options.onFailure);
 		}
-	},
-	
-	Updater: function(){
-		alert("Ajax.Updater is no longer supported!");
 	}
 };
 
@@ -314,7 +377,7 @@ function Draggable(element, options) {
 }
 
 var Effect = {
-	Appear: function(element, options){
+	/*Appear: function(element, options){
 		if(options.to)
 			$j(P2J.make$(element)).delay(options.delay ? options.delay * 1000 : 0).fadeTo(options.duration ? options.duration * 1000 : 400, options.to);
 		else
@@ -326,7 +389,7 @@ var Effect = {
 			$j(P2J.make$(element)).delay(options.delay ? options.delay * 1000 : 0).fadeTo(options.duration ? options.duration * 1000 : 400, options.to);
 		} else
 			$j(P2J.make$(element)).fadeOut(options.duration ? options.duration * 1000 : 400);
-	},
+	},*/
 	
 	BlindUp: function(element, options){
 		if(typeof options == "undefined") options = {};
@@ -348,12 +411,12 @@ var Effect = {
 			
 	},
 	
-	Move: function(element, options){
+	/*Move: function(element, options){
 		if(options.delay)
 			$j(P2J.make$(element)).delay(options.delay * 1000).animate({"left": options.x}, {"duration" : options.duration * 1000});
 		else
 			$j(P2J.make$(element)).animate({"left": options.x}, {"duration" : options.duration * 1000});
-	},
+	},*/
 
 	SlideDown: function(element, options){
 		$j(P2J.make$(element)).slideDown();
@@ -361,15 +424,15 @@ var Effect = {
 
 	SlideUp: function(element, options){
 		$j(P2J.make$(element)).slideUp();
-	},
+	}/*,
 	
 	Highlight: function (element, options){
 		$j(P2J.make$(element)).effect("highlight", {}, 1000);
-	}
+	}*/
 };
 
 var Sortable = {
-	create: function(element, options){
+	/*create: function(element, options){
 		var cw = false;
 		if(options && options.containment && typeof options.containment == 'string')
 			cw = options.containment;
@@ -392,7 +455,7 @@ var Sortable = {
 			connectWith: cw,
 			dropOnEmpty: true,
 			handle: typeof options.handle != "undefined"  ? $j('.'+options.handle) : false});
-	},
+	},*/
 	
 	serialize: function(element, options){
 		if(typeof options == "undefined")
@@ -405,7 +468,7 @@ var Sortable = {
 		return serial.replace(/&/g,";").replace(/\[\]\=/g,"");
 	}
 };
-
+/*
 var Event = {
 	observe: function(element, action, call){
 		if(action == "load")
@@ -438,7 +501,7 @@ var Builder = {
 		
 		return E;
 	}
-};
+};*/
 
 var qTipSharedRed = {
 	position: {
@@ -635,25 +698,15 @@ $j(function(){
 			$j.jStorage.deleteKey('phynxUseTouch');
 			//$j(this).dialog("close");
 			document.location.reload(true);
-			/*$j("#messageTouchReset").dialog({
-				modal: true,
-				buttons: {
-					"Ja": function() {
-						$j.jStorage.deleteKey('phynxUseTouch');
-						$j(this).dialog("close");
-						document.location.reload(true);
-					},
-					"Abbruch": function() {
-						$j(this).dialog("close");
-					}
-				},
-				resizable: false
-			});*/
-
 		});
 	} else {
 		$j('#buttonTouchReset').hide();
 	}
+	
+	if(typeof alex == "undefined")
+		$j('#buttonMenu').hide();
+	else
+		$j('#buttonMenu').on(Touch.trigger, function(){ alex.menu(); });
 });
 
 if(!useTouch){
@@ -682,11 +735,7 @@ if(!useTouch){
 			}
 
 		}, event);
-	})/*.each(function(i) {
-	   $j.prop(this, 'oldtitle', $j.prop(this, 'title'));
-	   this.removeAttribute('title');
-	   this.removeAttribute('alt');
-	})*/;
+	});
 
 
 	$j(document).on("click", ".contentBrowser td", function(ev){
@@ -734,7 +783,10 @@ $j(document).on('mouseover', '.bigButton', function(event) {
 	}, event);
 });
 
-$j(document).on("keyup", function(){
+$j(document).on("keyup", function(event){
+	if($j(event.target).prop("id") == "loginPassword" || $j(event.target).prop("id") == "loginUsername" || $j(event.target).prop("id") == "anwendung" || $j(event.target).prop("id") == "loginMandant")
+		return;
+	
 	if(Date.now() - Ajax.lastRequestTime > 5 * 60 * 1000)
 		contentManager.rmePCR('Menu','','autoLogoutInhibitor','');
 });

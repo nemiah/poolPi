@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
  
 function htmlReplaces(string) {
@@ -65,7 +65,9 @@ var AC = {
 	},
 
 	reloadChecker: function(transport){
-		if(ACDiv.style.display == "none") Effect.Appear(ACDiv,{duration:0.4});
+		if(ACDiv.style.display == "none") 
+			$j(ACDiv).fadeIn();
+		
 		$('ACDiv').update(transport.responseText);
 		if($('AutoCompleteNumRows') && $('AutoCompleteNumRows').value == "1")
 			AC.update(40);	
@@ -161,11 +163,6 @@ var AC = {
 	doRequest: function(forField, targetClass){
 		if(forField.value != "") 
 			contentManager.rmePCR(targetClass, '', "getACHTML", [forField.id, htmlReplaces(forField.value)], AC.reloadChecker);
-			/*new Ajax.Request('./interface/rme.php', {
-			
-			method:"get", 
-			parameters:'class='+targetClass+"&method=getACHTML&constructor=''&parameters='"+forField.id+"','"+htmlReplaces(forField.value)+"'", 
-			onSuccess: AC.reloadChecker});*/
 	},
 	
 	start: function(forField){

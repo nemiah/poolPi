@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 
 if(isset($argv[1]))
@@ -35,26 +35,69 @@ $e = new ExtConn($absolutePathToPhynx);
 
 $e->addClassPath($absolutePathToPhynx."/plugins/Installation");
 
-$e->useDefaultMySQLData();
+#$e->useDefaultMySQLData(); //DOES NOT WORK IN CLOUD!
 
-$e->useAdminUser();
+if($argv[2] == "All"){
+	$mandanten = Installation::getMandanten(true);
+	$data = array();
+	foreach($mandanten AS $httpHost){
+		$_SERVER["HTTP_HOST"] = $httpHost;
+		
+		Session::reloadDBData(false);
+		try {
+			$e->useAdminUser();
+		} catch (NoDBUserDataException $ex){
+			echo $httpHost.": ".get_class($ex)."\n";
+			continue;
+		}
+		
+		$I = new mInstallation();
+		$data[$httpHost] = $I->updateAllTables();
+	}
+} else {
+	Session::reloadDBData();
+	try {
+		$e->useAdminUser();
+	} catch (TableDoesNotExistException $ex){
+		if($ex->getTable() != "User")
+			throw $ex;
+	}
+
+	$I = new mInstallation();
+	$data = array("*" => $I->updateAllTables());
+}
 
 $CH = Util::getCloudHost();
-
-
-$I = new mInstallation();
-$data = $I->updateAllTables();
+if($CH == null OR !isset($CH->emailAdmin)){
+	foreach($data AS $host => $sub){
+		echo "Checking $host …\n";
+		foreach($sub AS $k => $v)
+			echo $k.": ".trim($v)."\n";
+		echo "Done $host …\n";
+	}
+	$e->cleanUp();
+	exit();
+}
 
 $T = new HTMLTable(2);
 $T->setTableStyle("font-size:10px;font-family:sans-serif;");
 
 $T->addColStyle(1, "vertical-align:top;");
-
-foreach($data AS $k => $v)
-	$T->addRow(array($k, "<pre>".trim($v)."</pre>"));
-
+foreach($data AS $host => $sub){
+	foreach($sub AS $k => $v)
+		$T->addRow(array($k, "<pre>".trim($v)."</pre>"));
+}
 
 $mimeMail2 = new PHPMailer(true, "", true);
+$mimeMail2->SMTPOptions = array(
+	'ssl' => array(
+		'verify_peer' => false,
+		'verify_peer_name' => false,
+		'allow_self_signed' => true
+	)
+);
+#$mimeMail2->SMTPDebug = 2;
+$mimeMail2->Hostname = trim(shell_exec("hostname"));
 $mimeMail2->CharSet = "UTF-8";
 $mimeMail2->Subject = "Installation Plugin";
 
@@ -68,10 +111,14 @@ $mimeMail2->IsHTML();
 $mimeMail2->AltBody = "Diese Nachricht wird nur als HTML übertragen";
 
 $mimeMail2->AddAddress($CH->emailAdmin);
-
-if(!$mimeMail2->Send())
-	throw new Exception ("E-Mail could not be sent!");
-
+try {
+	$mimeMail2->Send();
+} catch (phpmailerException $ex){
+	#echo $ex->errorMessage();
+	echo nl2br(print_r($mimeMail2->ErrorInfo, true))."\n";
+	echo "Host: ".$mimeMail2->Host."\n";
+	echo "Username: ".$mimeMail2->Username."\n";
+}
 $e->cleanUp();
 
 ?>

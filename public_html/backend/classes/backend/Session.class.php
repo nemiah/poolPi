@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class Session {
 	static $instance;
@@ -48,45 +48,41 @@ class Session {
 			AppPlugins::init();
 	}
 	
-	public static function reloadDBData() {
-		$_SESSION["DBData"] = $_SESSION[self::$sessionVariable]->getDBData();
+	public static function reloadDBData($useSame = true) {
+		$_SESSION["DBData"] = $_SESSION[self::$sessionVariable]->getDBData(null, $useSame ? $_SESSION["DBData"]["InstallationID"] : null);
 		
 		$DBWrite = Environment::getS("databaseDataWrite", null);
 		if($DBWrite !== null)
 			$_SESSION["DBDataWrite"] = $DBWrite;
 	}
 	
-	public function getDBData($newFolder = null){
-		$external = false;
-		
-		if(file_exists(Util::getRootPath()."../../phynxConfig")){
-			$newFolder = Util::getRootPath()."../../phynxConfig/";
-			$external = true;
-		}
-		
-		if(file_exists(Util::getRootPath()."../phynxConfig")){
-			$newFolder = Util::getRootPath()."../phynxConfig/";
-			$external = true;
-		}
-		
-		if($newFolder == null)
-			$newFolder = Util::getRootPath()."system/DBData/";
+	public function getDBData($newFolder = null, $forceID = null){
+		list($newFolder, $external) = Installation::getDBFolder($newFolder);
 		
 		$findFor = "*";
 		if(isset($_SERVER["HTTP_HOST"]))
 			$findFor = $_SERVER["HTTP_HOST"];
+		
 		$data = new mInstallation();
-		if($newFolder != "") $data->changeFolder($newFolder);
+		if($newFolder != "") 
+			$data->changeFolder($newFolder);
+		
 		$data->setAssocV3("httpHost","=",$findFor);
-		#$data->loadCollectionV2();
+		
+		if($forceID !== null){
+			$data = new mInstallation();
+			if($newFolder != "") 
+				$data->changeFolder($newFolder);
+			$data->addAssocV3("InstallationID", "=", $forceID);
+		}
 		
 		$n = $data->getNextEntry();
 		
 		if($n == null) {
-			#$data = new mInstallation();
-			#if($newFolder != "") $data->changeFolder($newFolder);
 			$data = new mInstallation();
-			if($newFolder != "") $data->changeFolder($newFolder);
+			if($newFolder != "") 
+				$data->changeFolder($newFolder);
+			
 			$data->setAssocV3("httpHost","=","*");
 			$n = $data->getNextEntry();
 		}
@@ -132,6 +128,14 @@ class Session {
 	}
 	
 	public function checkIfUserIsAllowed($plugin){
+		// <editor-fold defaultstate="collapsed" desc="Aspect:jP">
+		try {
+			$MArgs = func_get_args();
+			return Aspect::joinPoint("around", $this, __METHOD__, $MArgs);
+		} catch (AOPNoAdviceException $e) {}
+		Aspect::joinPoint("before", $this, __METHOD__, $MArgs);
+		// </editor-fold>
+		
 		if($plugin == "Menu") return true;
 		if($plugin == "Messages") return true;
 		if($plugin == "JSLoader") return true;
@@ -160,6 +164,10 @@ class Session {
 	public function isUserAdmin(){
 		$UA = $this->currentUser->getA();
 		return $UA->isAdmin;
+	}
+
+	public static function isInstallation(){
+		return Session::currentUser()->A("isInstall") !== null;
 	}
 
 	public static function isUserAdminS(){
@@ -218,13 +226,13 @@ class Session {
 	}*/
 
 	public static function isPluginLoaded($pluginName){
-
+		
 		if(isset($_SESSION["viaInterface"]) AND $_SESSION["viaInterface"] == true)
 			return class_exists($pluginName, false);
 
 		if(!isset($_SESSION["CurrentAppPlugins"])) 
 			return false;
-		
+
 		return $_SESSION["CurrentAppPlugins"]->isPluginLoaded($pluginName);
 		#return in_array($pluginName,$_SESSION["CurrentAppPlugins"]->getAllPlugins());
 	}
@@ -265,8 +273,10 @@ class Session {
 		$_SESSION["CurrentAppPlugins"] = new AppPlugins();
 		$_SESSION["CurrentAppPlugins"]->scanPlugins();
 		$_SESSION["applications"]->setActiveApplication($application);
+		$_SESSION["CurrentAppPlugins"]->scanPlugins("customer");
 		$_SESSION["CurrentAppPlugins"]->scanPlugins();
 		$_SESSION["classPaths"] = array();
+		
 		$this->runOnLoginFunctions();
 	}
 	
@@ -280,10 +290,11 @@ class Session {
 		
 		$c = $this->getCurrentUser();
 		$d = array();
-		$d["loginUsername"] = $c->getA()->username;
-		$d["loginSHAPassword"] = $c->getA()->SHApassword;
-		$d["loginSprache"] = $c->getA()->language;
+		$d["loginUsername"] = $c->A("username");
+		$d["loginSHAPassword"] = $c->A("SHApassword");
+		$d["loginSprache"] = $c->A("language");
 		$d["anwendung"] = $application;
+		$d["loginMandant"] = $_SESSION["DBData"]["InstallationID"];
 		$U->doLogin($d);
 		ob_end_clean();
 	}

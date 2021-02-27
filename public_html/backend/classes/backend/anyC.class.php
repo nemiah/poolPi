@@ -15,10 +15,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class anyC extends Collection {
 	
+	public $appendable = false;
+	public $targetFrame = null;
 	/**
 	 * Creates a new instance of this class.
 	 * 
@@ -31,6 +33,14 @@ class anyC extends Collection {
 		#}
 	}
 
+	function appendable($isit){
+		$this->appendable = $isit;
+	}
+
+	function targetFrame($name){
+		$this->targetFrame = $name;
+	}
+	
 	/**
 	 * @param string $collectionOf
 	 * @param string $field

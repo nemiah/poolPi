@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class UserGUI extends User implements iGUIHTML2 {
 	function getHTML($id){
@@ -45,13 +45,17 @@ class UserGUI extends User implements iGUIHTML2 {
 		$AC->lCV3();
 		$admins = $AC->numLoaded();
 		
-		$AC = anyC::get("User", "isAdmin", "0");
-		$AC->lCV3();
-		$users = $AC->numLoaded();
+		
+		#$AC->lCV3();
+		#$users = $AC->numLoaded();
 		
 		$gui = new HTMLGUIX($this);
 		#$gui->setObject();
 		$gui->name("Benutzer");
+		
+		if(Session::isPluginLoaded("mMultiLanguage"))
+			$gui->activateFeature("addAnotherLanguageButton", $this, "UserPosition");
+		
 		
 		$gui->attributes(array(
 			"name",
@@ -67,6 +71,13 @@ class UserGUI extends User implements iGUIHTML2 {
 			"UserSkype",
 			"UserTel"));
 		
+		if(Applications::activeApplication() == "supportBox"){
+			$gui->attributes(array(
+				"name",
+				"username",
+				"password",
+				"SHApassword"));
+		}
 		
 		$gui->label("name","Name");
 		$gui->label("username","Benutzername");
@@ -80,7 +91,7 @@ class UserGUI extends User implements iGUIHTML2 {
 		$gui->label("UserSkype","Skype");
 		$gui->label("UserTel","Telefon");
 		
-		$gui->type("language","select", array("de_DE" => "Deutsch (Deutschland) €", "de_DE_EUR" => "Deutsch (Deutschland) EUR", "de_CH" => "Deutsch (Schweiz) sFr", "de_CH_CHF" => "Deutsch (Schweiz) CHF", "en_GB" => "English (United Kingdom)"));
+		$gui->type("language","select", array("de_DE" => "Deutsch (Deutschland) €", "de_DE_EUR" => "Deutsch (Deutschland) EUR", "de_CH" => "Deutsch (Schweiz) sFr", "de_CH_CHF" => "Deutsch (Schweiz) CHF", "en_GB" => "English (United Kingdom)", "es_ES" => "Español (España)"));
 		#$gui->setOptions("language",);
 		$gui->descriptionField("SHApassword","Zum Ändern eingeben.");
 		$gui->type("password","hidden");
@@ -88,12 +99,24 @@ class UserGUI extends User implements iGUIHTML2 {
 		#$gui->type("isAdmin","radio");
 		$gui->descriptionField("isAdmin","<span style=\"color:red;\">Achtung: als Admin sehen Sie nur diese Admin-Oberfläche und NICHT das Programm selbst!</span>");
 		
+		if(Session::isPluginLoaded("mPasswort")){
+			$gui->type("SHApassword", "hidden");
+			$gui->addSideButton(Passwort::getButton($this));
+		}
+		
+		if(Session::isPluginLoaded("mWebAuth") AND $this->A("UserWebAuthCredentials") != ""){
+			$B = $gui->addSideButton("WebAuth-Zugang\nlöschen", "./plugins/WebAuth/lock_break.png");
+			$B->rmePCR("User", $this->getID(), "clearWebAuthData", "", OnEvent::reload("Left"));
+		}
 		
 		#$gui->translate($this->loadTranslation());
-		$gui->space("UserEmail",isset($this->texts["Kontaktdaten"]) ? $this->texts["Kontaktdaten"] : "Kontaktdaten");
-		$gui->type("isAdmin","checkbox");
-		if($admins == 1 AND $users == 0)
+		$gui->space("UserEmail", isset($this->texts["Kontaktdaten"]) ? $this->texts["Kontaktdaten"] : "Kontaktdaten");
+		
+		$gui->type("isAdmin", "checkbox");
+		$firstUser = anyC::getFirst("User", "isAdmin", "0");
+		if($firstUser === null AND $admins == 1)
 			$gui->type("isAdmin", "hidden");
+		
 		#$gui->setOptions("isAdmin",array("1","0"),array("ja ","nein"));
 		#$gui->setStandardSaveButton($this);
 		
@@ -113,7 +136,19 @@ class UserGUI extends User implements iGUIHTML2 {
 		if($this->getID() > 20000)
 			$gui->optionsEdit (false, false);
 		
-		return $gui->getEditHTML().(($this->A->isAdmin != 1) ? $html :"");
+	
+		$showRestrictions = true;
+		if($this->A("isAdmin"))
+			$showRestrictions = false;
+		if(Applications::activeApplication() == "supportBox")
+			$showRestrictions = false;
+		
+		return $gui->getEditHTML().($showRestrictions ? $html : "");
+	}
+	
+	public function clearWebAuthData(){
+		$this->changeA("UserWebAuthCredentials", "");
+		$this->saveMe();
 	}
 }
 ?>

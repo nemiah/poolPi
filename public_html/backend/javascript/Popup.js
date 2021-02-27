@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 var Popup = {
 	windowsOpen: 0,
@@ -27,7 +27,7 @@ var Popup = {
 	attached: Array(),
 	
 	presets: {
-		large: {hPosition: "center", width:1000},
+		large: {hPosition: "center", width:1000, top: 20},
 		center: {hPosition: "center"}
 	},
 
@@ -59,6 +59,9 @@ var Popup = {
 	},
 
 	refresh: function(targetPlugin, bps, firstParameter){
+		if(typeof Popup.lastPopups[targetPlugin] == "undefined")
+			return;
+		
 		var values = Popup.lastPopups[targetPlugin];
 		var arrayCopy = values[4].slice(0, values[4].length); //because targetPluginMethodParameters is only a reference
 		if(typeof firstParameter != "undefined"){
@@ -88,7 +91,7 @@ var Popup = {
 		if(typeof type == "undefined")
 			type = "";
 		
-		Popup.create(type,name,title, options, ignoreWidth);
+		Popup.create(type, name, title, options, ignoreWidth);
 		Popup.update(transport, type, name, options);
 	},
 
@@ -151,6 +154,9 @@ var Popup = {
 	create: function(ID, type, name, options, ignoreWidth){
 		var size = Overlay.getPageSize(true);
 		var width = 400;
+		if($j(window).width() < width)
+			width = $j(window).width();
+		
 		var hasX = true;
 		var persistent = false;
 		var targetContainer = "windows";
@@ -165,11 +171,14 @@ var Popup = {
 			//options.width = "100%";
 			options.height = $j(window).height();
 			options.hPosition = "center";
-			options.absolute = true;
+			//options.absolute = true;
 			options.hasMinimize = false;
 		}
 		
 		var top = null;
+		if(Interface.mobile())
+			top = 0;
+		
 		var right = null;
 		var left = null;
 		var hasMinimize = false;
@@ -195,6 +204,8 @@ var Popup = {
 				if(options.position == "left"){
 					left = $j('#contentLeft').offset().left + $j('#contentLeft').width();
 					top = $j('#contentLeft').offset().top + parseInt($j('#contentLeft').css('padding-top'));
+					if(contentManager.layout == "desktop")
+						top = $j('#wrapper').offset().top + parseInt($j('#contentLeft').css('padding-top'));
 				}
 			}
 
@@ -267,9 +278,11 @@ var Popup = {
 		if(top == null)
 			top = size[0] <= 1124 ? (66 + $(targetContainer).childNodes.length * 40) : (100 + $(targetContainer).childNodes.length * 40);
 		
-		if(right == null && left == null)
+		if(right == null && left == null){
 			right = size[0] <= 1124 ? (0) : (410 + $(targetContainer).childNodes.length * 20);
-		
+			if(size[0] > 1800)
+				right += (size[0] - 1800) / 2;
+		}
 		//if(left != null)
 		//	right = size[0] - width - left;
 			
@@ -287,22 +300,6 @@ var Popup = {
 			if(top < 0)
 				top = 0;
 		}
-
-		/*var element = Builder.node(
-			"div",
-			{
-				id: type+'Details'+ID,
-				style: 'display:none;top:'+top+'px;'+(right != null ? 'right:'+right : 'left:'+left)+'px;width:'+width+'px;z-index:'+Popup.zIndex,
-				"class": "popup"
-			}, [
-				Builder.node("div", {"class": "backgroundColor1 cMHeader", id: type+'DetailsHandler'+ID}, [
-					Builder.node("a", {id: type+"DetailsCloseWindow"+ID, "class": "closeContextMenu backgroundColor0 borderColor0", style:"cursor:pointer;"+(hasX ? "" : "display:none;")}, ["X"])
-					, name]),
-				Builder.node("div", {"class": "backgroundColor0", style: "clear:both;", id: type+'DetailsContentWrapper'+ID}, [
-					Builder.node("div", {id: type+'DetailsContent'+ID})
-				])
-				
-			]);*/
 
 
 		var element = "<div id=\""+type+'Details'+ID+"\" style=\""+(absolute ? "position:absolute;" : "")+'display:none;top:'+top+'px;'+(right != null ? 'right:'+right : 'left:'+left)+'px;width:'+width+(width.toString().indexOf("%") > -1 ? "" : "px")+';z-index:'+Popup.zIndex+"\" class=\"popup\">\n\
@@ -344,10 +341,17 @@ var Popup = {
 				
 			}
 		});
-		Event.observe(type+'DetailsCloseWindow'+ID, 'click', function() {Popup.close(ID, type);});
+		//Event.observe(type+'DetailsCloseWindow'+ID, 'click', function() {Popup.close(ID, type);});
+		$j('#'+type+'DetailsCloseWindow'+ID).click(function() { 
+			Popup.close(ID, type);
+			if(options.onClose)
+				options.onClose();
+		});
 		if(hasMinimize){
-			Event.observe(type+'DetailsMinimizeWindow'+ID, 'click', function() {Popup.minimize(ID, type);});
-			Event.observe(type+'DetailsRestoreWindow'+ID, 'click', function() {Popup.restore(ID, type);});
+			/*Event.observe(type+'DetailsMinimizeWindow'+ID, 'click', function() {Popup.minimize(ID, type);});
+			Event.observe(type+'DetailsRestoreWindow'+ID, 'click', function() {Popup.restore(ID, type);});*/
+			$j('#'+type+'DetailsMinimizeWindow'+ID).click(function() { Popup.minimize(ID, type); });
+			$j('#'+type+'DetailsRestoreWindow'+ID).click(function() { Popup.restore(ID, type); });
 		}
 		
 		if(fullscreen){
@@ -362,7 +366,7 @@ var Popup = {
 				elem.webkitRequestFullscreen();
 			}
 		}
-		//Event.observe(type+'Details'+ID, 'click', function(event) {Popup.updateZ(event.target);});
+		
 
 	},
 

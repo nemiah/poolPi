@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
- *  2007 - 2016, Rainer Furtmeier - Rainer@Furtmeier.IT
+ *  2007 - 2020, open3A GmbH - Support@open3A.de
  */
 class XML {
 	
@@ -60,7 +60,7 @@ class XML {
 		
 		while($t = $this->getNextEntry()){
 			$xml .= "
-	<entry class=\"".$this->collectionOf."\">
+	<entry class=\"".($this->collectionOf != "" ? $this->collectionOf : get_class($t))."\">
 		<id>".$t->getID()."</id>";
 			
 			$A = $t->getA();
@@ -97,8 +97,11 @@ class XML {
 	}
 	
 	public function lCV4(){
-		if($this->xml == null) return;
-		if($this->parsed == null) $this->parseXML();
+		if($this->xml == null) 
+			return;
+		
+		if($this->parsed == null) 
+			$this->parseXML();
 		
 		$class = null;
 		$collector = array();
