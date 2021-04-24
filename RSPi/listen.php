@@ -47,7 +47,9 @@ while ($running) {
 		exit(1);
 		
 	$data = dio_read($fd);
+	/*echo bin2hex($data)."\n";
 	if(substr(bin2hex($data), 0, 4) == "0000"){
+		
 		$add = "";
 		if(substr(bin2hex($buf), 0, 4) == "0000" AND substr(bin2hex($buf), 0, 6) != "000000")
 				$add = "00";
@@ -56,12 +58,22 @@ while ($running) {
 		
 		#file_put_contents("read.log", $c."\n", FILE_APPEND);
 		
-		$pi->save($c);
+		if(substr($c, -2) == "ff")
+			$pi->save($c);
 		
 		$buf = $data;
 	}
 	else
-		$buf .= $data;
+		$buf .= $data;*/
+	
+	$buf .= $data;
+	
+	$c = bin2hex($buf);
+	if(substr($c, -2) == "ff"){
+		$pi->save($c);
+		$buf = "";
+	}
+	
 } 
 
 class poolPi {
@@ -89,15 +101,17 @@ class poolPi {
 	}
 	
 	function save($data){
+		
 		$data = strtoupper($data);
 		$line = str_split($data, 2);
-		if(!isset($line[3]))
-			return;
+		#if(!isset($line[3]))
+		#	return;
 		
-		if($line[3] != "68")
+		if($line[13] != "68")
 			return;
 		
 		$result = $this->analyze($line);
+		#return;
 		
 		if(!isset($result[2]->value))
 			return;
@@ -117,7 +131,7 @@ class poolPi {
 		$this->values[$result[0]] = $result[2]->value;
 		$this->last[$result[0]] = time();
 		
-		echo date("d.m.Y H:i:s").": Updating $result[1]: ".$result[2]->value."... ";
+		#echo date("d.m.Y H:i:s").": Updating $result[1]: ".$result[2]->value."... ";
 		
 		$r = $this->c->exec("UPDATE poolpi SET data = '".SQLite3::escapeString(json_encode($result[2], JSON_UNESCAPED_UNICODE))."', name = '".SQLite3::escapeString($result[1])."' WHERE number = '".SQLite3::escapeString($result[0])."';");
 		echo "SQL Update: ".($r ? "OK" : "Fehler")."\n";
@@ -136,31 +150,31 @@ class poolPi {
 	function analyze(array $data){
 		#print_r($data);
 		$r = new stdClass();
-		$n = hexdec($data[5]);
+		$n = hexdec($data[15]);
 		$l = "";
 		
-		switch($data[5]){
+		switch($data[15]){
 			case "36":
 				$l = "Dosierverzögerung";
 				
-				$r->value = hexdec($data[9].$data[10]);
+				$r->value = hexdec($data[19].$data[20]);
 			break;
 		
 			case "03":
 				$l = "Modultyp";
 				
-				$r->value = $this->toAscii(array($data[9], $data[10], $data[11], $data[12], $data[13], $data[14], $data[15], $data[16], $data[17], $data[18], $data[19], $data[20]));
+				$r->value = $this->toAscii(array($data[19], $data[20], $data[21], $data[22], $data[23], $data[24], $data[25], $data[26], $data[27], $data[28], $data[29], $data[30]));
 			break;
 		
 			case "04":
 				$l = "Betriebsart";
 				
 				$mode = "";
-				if($data[9] == "01")
+				if($data[19] == "01")
 					$mode = "Automatik";
-				if($data[9] == "02")
+				if($data[19] == "02")
 					$mode = "Manuell";
-				if($data[9] == "04")
+				if($data[19] == "04")
 					$mode = "Adaption";
 				
 				$r->value = $mode;
@@ -169,10 +183,10 @@ class poolPi {
 			case "05":
 				$l = "Messwert Cl2";
 				
-				$r->value = (hexdec($data[9].$data[10]) * 0.01);
-				$r->min = (hexdec($data[11].$data[12]) * 0.01);
-				$r->max = (hexdec($data[13].$data[14]) * 0.01);
-				$r->unit = $this->toAscii(array($data[15], $data[16], $data[17], $data[18], $data[19]));
+				$r->value = (hexdec($data[19].$data[20]) * 0.01);
+				$r->min = (hexdec($data[21].$data[22]) * 0.01);
+				$r->max = (hexdec($data[23].$data[24]) * 0.01);
+				$r->unit = $this->toAscii(array($data[25], $data[26], $data[27], $data[28], $data[29]));
 				
 				#echo "Messwert: ".(hexdec($data[9].$data[10]) * 0.01)."; ";
 				#echo "Bereich Anfang: ".(hexdec($data[11].$data[12]) * 0.01)."; ";
@@ -185,13 +199,17 @@ class poolPi {
 			case "06":
 				$l = "Messwert pH";
 				
-				$r->value = (hexdec($data[9].$data[10]) * 0.01);
-				$r->min = (hexdec($data[11].$data[12]) * 0.01);
-				$r->max = (hexdec($data[13].$data[14]) * 0.01);
-				$r->unit = $this->toAscii(array($data[15], $data[16], $data[17], $data[18], $data[19]));
+				$r->value = (hexdec($data[19].$data[20]) * 0.01);
+				$r->min = (hexdec($data[21].$data[22]) * 0.01);
+				$r->max = (hexdec($data[23].$data[24]) * 0.01);
+				$r->unit = $this->toAscii(array($data[25], $data[26], $data[27], $data[28], $data[29]));
 			break;
+			
+			#default:
+			#	echo $data[15].": ".implode("", $data)."\n";
+			#break;
 		}
-		
+		#print_r($r);
 		return array($n, $l, $r);
 	}
 	
