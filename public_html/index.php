@@ -33,7 +33,7 @@ $servers = "";
 $AC = anyC::get("poolSteuerung");
 try {
 	while($S = $AC->n())
-		$servers .= ($servers != "" ? ",\n					" : "").$S->A("poolSteuerungTyp").": \"".$S->A("poolSteuerungIP")."\"";
+		$servers .= ($servers != "" ? ",\n					" : "").$S->A("poolSteuerungTyp").": \"".(strpos($S->A("poolSteuerungMAC"), ":") !== false ? $S->A("poolSteuerungMAC") : $S->A("poolSteuerungIP"))."\"";
 } catch(NoDBUserDataException $e){
 	emoFatalError("poolPi kann leider keine Verbindung zur Datenbank herstellen","Es wurden noch keine Datenbankzugangsdaten eingetragen.<br />Bitte benutzen Sie das Installations-Plugin im Admin-Bereich von <a href=\"./backend\">poolPi</a>","poolPi");
 } catch(TableDoesNotExistException $e){
